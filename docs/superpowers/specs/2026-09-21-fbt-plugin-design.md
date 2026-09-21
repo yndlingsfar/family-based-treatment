@@ -139,6 +139,7 @@ export interface CookidooNutrition {
 
 export interface CookidooRecipeStep {
   readonly group: string | null;
+  readonly number: string | null;   // Schrittnummer, kommt als `title`
   readonly text: string;
 }
 ```
