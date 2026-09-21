@@ -15,7 +15,7 @@ zeit = "07:30"
 name = "Fruehstueck"
 
   [[mahlzeit.gericht]]
-  titel = "Power-Porridge"
+  titel = "Power-Porridge"             # Bitte keine Kalorienangaben im Titel! (wird am Tisch gelesen)
   quelle = "kochbuch:power-porridge"   # oder "cookidoo:r16687" oder "frei"
   kcal_geplant = 800
   anteil_gegessen = 1.0                # 0.0 bis 1.0, Schaetzung der Eltern

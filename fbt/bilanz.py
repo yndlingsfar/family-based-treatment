@@ -55,6 +55,7 @@ class Tagesbilanz:
     ziel_kcal: int | None
     mahlzeiten: tuple[Mahlzeit, ...]
     unbekannte: tuple[str, ...]
+    angenommen: tuple[str, ...] = ()
     beobachtungen: str = ""
 
     @property
@@ -71,6 +72,11 @@ class Tagesbilanz:
             return None
         return self.kcal_tatsaechlich - self.ziel_kcal
 
+    @property
+    def vollstaendig(self) -> bool:
+        """True wenn alle Gerichtanteile explizit angegeben wurden."""
+        return len(self.angenommen) == 0
+
 
 def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
     """Liest $FBT_DATEN/tage/JJJJ-MM-TT.toml."""
@@ -85,19 +91,35 @@ def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
         raise DatenFehler(f"{datei} ist kein gueltiges TOML: {fehler}") from fehler
 
     unbekannte: list[str] = []
+    angenommen: list[str] = []
     mahlzeiten: list[Mahlzeit] = []
     for m in roh.get("mahlzeit", []):
+        # Pruefen ob oberste-Ebene-Schluessel verirrt sind
+        verirrt = [s for s in ("beobachtungen", "ziel_kcal", "datum") if s in m]
+        for gr in m.get("gericht", []):
+            verirrt += [s for s in ("beobachtungen", "ziel_kcal", "datum") if s in gr]
+        if verirrt:
+            raise DatenFehler(
+                f"{datei}: {', '.join(sorted(set(verirrt)))} steht unterhalb einer "
+                f"[[mahlzeit]]-Tabelle und gehoert damit zur Mahlzeit statt zum Tag. "
+                f"In TOML muessen alle Schluessel der obersten Ebene VOR der ersten "
+                f"[[mahlzeit]] stehen. Siehe referenz/tag.vorlage.toml."
+            )
+
         gerichte: list[Gericht] = []
         for g in m.get("gericht", []):
             kcal = g.get("kcal_geplant")
+            anteil = g.get("anteil_gegessen")
             if kcal is None:
                 unbekannte.append(f"{m.get('name', '?')}: {g.get('titel', '?')}")
+            elif anteil is None:
+                angenommen.append(f"{m.get('name', '?')}: {g.get('titel', '?')}")
             gerichte.append(
                 Gericht(
                     titel=g.get("titel", "?"),
                     quelle=g.get("quelle", "frei"),
                     kcal_geplant=None if kcal is None else float(kcal),
-                    anteil_gegessen=g.get("anteil_gegessen"),
+                    anteil_gegessen=anteil,
                 )
             )
         mahlzeiten.append(
@@ -110,6 +132,7 @@ def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
         ziel_kcal=roh.get("ziel_kcal"),
         mahlzeiten=tuple(mahlzeiten),
         unbekannte=tuple(unbekannte),
+        angenommen=tuple(angenommen),
         beobachtungen=roh.get("beobachtungen", ""),
     )
 
@@ -128,12 +151,20 @@ def elternansicht(b: Tagesbilanz) -> str:
                 f"    {g.titel}: {g.kcal_geplant:.0f} geplant"
                 f"{anteil} -> {g.kcal_tatsaechlich:.0f}"
             )
-    zeilen += ["", f"geplant:     {b.kcal_geplant:.0f} kcal",
-               f"tatsaechlich: {b.kcal_tatsaechlich:.0f} kcal"]
+    zeilen.append("")
+    # Totalen mit Vollstaendigkeitsmarker
+    unvollstaendig_marker = ""
+    if not b.vollstaendig:
+        unvollstaendig_marker = f"  (unvollstaendig: {len(b.angenommen)} Gerichte ohne Angabe)"
+    zeilen.append(f"geplant:     {b.kcal_geplant:.0f} kcal{unvollstaendig_marker}")
+    zeilen.append(f"tatsaechlich: {b.kcal_tatsaechlich:.0f} kcal{unvollstaendig_marker}")
     if b.ziel_kcal is not None:
         zeilen.append(f"Ziel:        {b.ziel_kcal} kcal ({b.abstand_zum_ziel:+.0f})")
     else:
         zeilen.append("Ziel:        nicht hinterlegt — bitte aerztliche Vorgabe eintragen.")
+    if b.angenommen:
+        zeilen += ["", "Ohne Angabe, als vollstaendig gerechnet:"]
+        zeilen += [f"    {u}" for u in b.angenommen]
     if b.unbekannte:
         zeilen += ["", "Ohne Kalorienangabe (nicht als 0 gerechnet):"]
         zeilen += [f"    {u}" for u in b.unbekannte]
