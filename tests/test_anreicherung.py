@@ -29,8 +29,11 @@ class TabelleTest(unittest.TestCase):
             with self.subTest(mittel=schluessel):
                 self.assertTrue(m.name)
                 self.assertTrue(m.einsatz)
-                # Kein Lebensmittel hat mehr als 900 kcal/100 g — reines Fett
-                # liegt bei 884. Ein hoeherer Wert ist ein Tippfehler.
+                # Die Obergrenze ist reines Fett: 900 kcal/100 g. Pflanzenoel
+                # liegt bei 884 (Speiseoel ist nicht ganz 100 % Fett),
+                # Butterschmalz/Ghee bei 892 und Kokosfett bei 900 — alle drei
+                # sind richtig, nicht zu hoch. Ein Wert ueber 900 dagegen ist
+                # ein Tippfehler. Also nichts nach unten "korrigieren".
                 self.assertGreater(m.kcal_100g, 0)
                 self.assertLessEqual(m.kcal_100g, 900)
                 if m.dichte_g_ml is not None:

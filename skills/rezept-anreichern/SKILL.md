@@ -40,8 +40,10 @@ dann direkt zum Zugeben über. Das ist kein Fehler des Skripts, aber ein Grund,
 das Ergebnis kurz gegen die Zutatenliste zu lesen, bevor du es weitergibst.
 
 Das Ziel (`700` in diesem Beispiel) ist **pro Portion**. `anreichern` rechnet
-intern auf die Gesamtmenge über alle Portionen hoch — `luecke_kcal` und
-`erreicht_kcal` in der Antwort sind deshalb Totalen, nicht Werte pro Portion.
+intern auf die Gesamtmenge über alle Portionen hoch — die Feldnamen sagen es
+selbst: `ausgangs_kcal_pro_portion` und `ziel_kcal_pro_portion` gelten je
+Portion, `luecke_kcal_gesamt` und `erreicht_kcal_gesamt` sind Totalen über
+alle Portionen.
 **Dasselbe gilt für `menge_g` und `kcal` in jedem einzelnen `Vorschlag`** —
 auch die sind für den ganzen Topf, nicht pro Teller. Bei vier Portionen kann
 das Skript z. B. „Rapsöl, 120 g" ausgeben, und das sind 120 g insgesamt. Beim
@@ -55,6 +57,10 @@ bilden — die Summe landet in der Tagesbilanz und damit im Arztbericht.
 
 1. **Ersetzen vor Zugeben.** Milch durch Sahne, Wasser durch Brühe. Die Portion
    darf nicht sichtbar wachsen — sichtbar mehr auf dem Teller löst Angst aus.
+   Ist die Lücke kleiner als der volle Austausch hergäbe, schlägt das Skript
+   **einen Teil** der Menge vor („150 g von insgesamt 412 g, der Rest bleibt
+   Vollmilch"). Diese Teilmenge so weitergeben, wie sie dasteht — die ganze
+   Menge zu ersetzen bringt mehr Kalorien, als die Bilanz ausweist.
 2. **Fett und Protein vor Kohlenhydraten.** Refeeding-Syndrom-Prophylaxe.
 3. **Geschmacksneutral bevorzugen.** Öl in der Sauce, Cashewmus in der Suppe.
 4. **Nicht über das Ziel hinaus.** Lieber knapp darunter und ein Snack dazu.
@@ -74,6 +80,14 @@ wird daraus Schlagsahne oder Mayonnaise.
 - Reicht ein Rezept nicht bis zum Ziel, gib nicht immer mehr hinein. Ein Shake
   dazu ist besser als eine Portion, die niemand schafft. Das Skript sagt über
   `warnungen` selbst, wenn es das Ziel nicht erreicht hat.
+- **Liegt das Rezept schon über dem Ziel**, gibt es nichts anzureichern, und
+  `warnungen` nennt den Überschuss pro Portion. Das Kochbuch ist auf
+  2800–3500 kcal am Tag ausgelegt; bei einer niedrigeren Verordnung ist das
+  der Normalfall, kein Fehler. Ein Konzept für halbe Portionen hat Stufe 1
+  noch nicht — sag den Überschuss offen, statt ihn stehen zu lassen.
+- Eine Zutat, für die keine Dichte hinterlegt ist (z. B. griechischer Joghurt
+  in Millilitern), wird **nicht** ersetzt; die Warnung nennt sie beim Namen.
+  Geraten wird nichts.
 - **Maltodextrin in den ersten zwei Wochen des Refeedings nur nach ärztlicher
   Absprache.** Das Skript lässt es bei `refeeding_phase=True` automatisch weg
   — deshalb ist das die Vorgabe, siehe oben.
