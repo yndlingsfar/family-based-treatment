@@ -184,16 +184,13 @@ kcal-Bandcheck bereits vorher bestanden:** Bei einigen Rezepten mit
 erfundener Portionenzahl war die resultierende Zutatenmasse pro "Portion"
 zwar größer als eine realistische Einzelportion (z. B.
 cremiges-parmesan-huehnchen mit 1734g für 1 Portion, kuerbis-feta-honig-auflauf
-mit 1867g, couscous-mit-gefluegel-und-tomatensalat mit 876g, ramen-suppe mit
-1168g), aber der resultierende kcal-Wert lag zufällig bereits innerhalb der
-100–1600-kcal-Bandgrenze — meist, weil auch die kcal-Angabe selbst schon zu
-niedrig war (nicht zuordenbare Grundzutaten, siehe oben). Diese Rezepte
-wurden **nicht** neu durchgerechnet (das hätte bei mindestens einem Fall,
-kaeseknoedel-spatzen, den kcal-Wert über die 1600er-Grenze getrieben, siehe
-unten), sondern erhielten nur das `portionen_geschaetzt`-Flag zur
-Transparenz. Eine Neuberechnung dieser Fälle wäre eine dritte Fix-Runde und
-ist hier bewusst nicht vorgenommen worden, um den Auftrag nicht über den
-gemeldeten Befund hinaus auszuweiten.
+mit 1867g, ramen-suppe mit 1168g), aber der resultierende kcal-Wert lag
+zufällig bereits innerhalb der 100–1600-kcal-Bandgrenze — meist, weil auch
+die kcal-Angabe selbst schon zu niedrig war (nicht zuordenbare
+Grundzutaten). In Fix-Runde 1 wurden diese drei bewusst **nicht** neu
+durchgerechnet, nur geflaggt, um den Auftrag nicht ueber den gemeldeten
+Befund hinaus auszuweiten. **In Fix-Runde 2 hat der Koordinator genau das
+nachgefordert** — siehe eigener Abschnitt unten.
 
 **Grenzfall, der bei mechanischer Anwendung des Bandes eine neue
 Verletzung erzeugt hätte:** kaeseknoedel-spatzen (852g Gesamtmasse, 4
@@ -202,7 +199,151 @@ Neuschätzung nach dem Auflauf-Band (350–450g) hätte 2 Portionen ergeben
 (426g/Portion, passt zur Masse), aber 1744 kcal/Portion (verletzt die
 1600er-Grenze) — die vorhandene Portionenzahl (4) wurde daher unverändert
 gelassen und nur geflaggt, statt sie durch eine Zahl zu ersetzen, die zwar
-zur Masse, aber nicht mehr zur kcal-Grenze passt.
+zur Masse, aber nicht mehr zur kcal-Grenze passt. Das gilt auch nach
+Fix-Runde 2 weiterhin.
+
+## Fix-Runde 2: drei weitere Portionenzahlen, und eine zweite Grundzutaten-Tabelle
+
+### Teil A: die drei verbliebenen Ein-Portion-Grossmengen
+
+Der Koordinator hat unabhängig nachgeprüft und drei Rezepte gefunden, bei
+denen `portionen_geschaetzt: true` gesetzt war, aber die Zahl selbst noch
+nicht korrigiert wurde (aus Fix-Runde 1, siehe oben). Alle drei wurden nach
+derselben Methode wie die 13 Rezepte aus Fix-Runde 1 neu geschätzt (Masse ÷
+Portionsgrößen-Band, dieselbe Gesamtkalorienzahl neu geteilt):
+
+| Rezept | Masse | alt | neu |
+|---|---:|---|---|
+| kuerbis-feta-honig-auflauf | 1867g | 1 × 578 | 5 × 116 → nach Teil B rekonstruiert auf 5 × 437 |
+| cremiges-parmesan-huehnchen | 1734g | 1 × 974 | 4 × 244 → nach Teil B rekonstruiert auf 4 × 613 |
+| ramen-suppe | 1168g | 1 × 850 | 3 × 283 → nach Teil B rekonstruiert auf 3 × 283 (unverändert, Kochbuch-Spanne) |
+
+(Die kcal-Werte wurden zunächst wie in Fix-Runde 1 nur neu geteilt, dann in
+Teil B unten für die drei "keine kcal-Angabe"-Fälle unter den dreien
+zusätzlich aus der jetzt vollständigeren Zutatensumme rekonstruiert.)
+`couscous-mit-gefluegel-und-tomatensalat`, `kuerbispuffer` und
+`huehnerbrust-mit-reis-und-kokosmilch` blieben unverändert, wie vom
+Koordinator angewiesen — ihre Portionenzahl steht im Kochbuch.
+
+### Teil B: `referenz/grundzutaten.json` — eine zweite, getrennte Tabelle
+
+**Befund:** Die Plausibilitätsprüfung deckte nur 43 % der 626
+Rezeptzutaten ab (272 zugeordnet), weil `anreicherung.json` nur Dinge
+enthält, die man einem Gericht *zusetzt* — nicht die Grundzutaten, aus
+denen ein Gericht *besteht* (Kartoffeln, Nudeln, Zwiebeln, Hackfleisch
+usw.). Für die meisten der 79 Rezepte konnte die Prüfung dadurch nichts
+prüfen.
+
+**Lösung:** Eine zweite Tabelle, `referenz/grundzutaten.json`, mit
+denselben Feldern wie `anreicherung.json` minus den
+Anreicherungs-spezifischen (`name`, `kcal_100g`, `dichte_g_ml`). 63
+Einträge, davon 47 aus der vom Koordinator vorgegebenen Ankerliste
+(verbatim übernommen) und **16 zusätzlich, weil sie in den 79 Rezepten
+tatsächlich vorkommen** (alle unter 900 kcal/100g, zum Spotchecken hier
+aufgelistet):
+
+| Schlüssel | Name | kcal/100g |
+|---|---|---:|
+| kuerbiskerne | Kürbiskerne | 559 |
+| tomaten-getrocknet | Getrocknete Tomaten | 258 |
+| gorgonzola | Gorgonzola | 353 |
+| frischkaese-doppelrahm | Frischkäse Doppelrahm | 350 |
+| gruyere | Gruyère | 413 |
+| vanilleeis | Vanille-Eis | 207 |
+| kekse | Kekse (Schoko, z. B. Oreo) | 480 |
+| quark-40 | Quark 40% Fett | 145 |
+| quark-20 | Speisequark 20% | 120 |
+| kakaopulver | Kakaopulver/Backkakao | 230 |
+| kinderriegel | Kinderriegel (Schoko) | 560 |
+| zucchini | Zucchini | 17 |
+| brokkoli | Brokkoli | 34 |
+| spinat | Spinat (frisch/TK) | 23 |
+| gemuese-mix | Suppen-/Tiefkühlgemüse gemischt | 30 |
+| weisswein | Weißwein | 82 |
+| mayonnaise | Mayonnaise | 680 |
+| sauce-hollandaise | Sauce Hollandaise fertig | 400 |
+| kartoffelkloesse | Kartoffelklöße/-knödel fertig | 110 |
+| margarine | Margarine | 720 |
+| rahmsossenpulver | Rahmsoßenpulver | 420 |
+| fladenbrot | Fladenbrot | 280 |
+| pesto | Pesto | 450 |
+| nudelsauce-fertig | Fertige Nudelsauce (Tomate) | 65 |
+| kuchenteig-fertig | Fertiger Kuchenteig | 280 |
+| kapern | Kapern | 23 |
+| sweet-chili-sauce | Sweet-Chili-Sauce | 130 |
+| rahmtomatensuppe-dose | Rahmtomatensuppe (Dose) | 70 |
+| salami | Salami/gebratenes Fleisch | 340 |
+| chiasamen | Chiasamen | 486 |
+| obst-allgemein | Obst, unspezifisch (Richtwert) | 50 |
+
+(Liste gekürzt auf die tatsächlich hinzugefügten — die vollständige Tabelle
+steht in `referenz/grundzutaten.json`.) Bewusst **kein** Eintrag für Salz,
+Pfeffer, Gewürze, Kräuter und Wasser (kalorisch irrelevant). Ein paar
+weitere kalorisch nennenswerte, aber sehr seltene oder mehrdeutige
+Zutaten (Balsamico, Backmalz, Hefe, Zitronenschale, Limettensaft,
+Flohsamenschalen, rote Chilischoten, Raspelschokolade zum Verzieren)
+wurden bewusst **nicht** aufgenommen — zu geringe Menge oder zu unklar,
+um einen Wert zu verantworten, ohne zu raten.
+
+`fbt/kochbuch.py`: `plausibilitaet(roh, mittel, grund=None)` sucht jeden
+Zutaten-Schlüssel zuerst in `mittel`, dann in `grund` — Standardwert
+`None` verhält sich wie ein leeres Dict, bestehende Aufrufe mit zwei
+Argumenten bleiben unverändert funktionsfähig. `fbt/anreicherung.py`:
+neue Funktion `lade_grundzutaten()`, gleiche Dateiform wie `lade_mittel()`.
+Beide Tabellen bleiben strikt getrennt — die Anreicherungslogik darf
+niemals eine Grundzutat als Zusatz vorschlagen.
+
+**Zwei echte Transkriptionsfehler**, die erst durch die Grundzutaten-
+Abdeckung sichtbar wurden, wurden korrigiert (keine Kochbuch-Zahlen
+geändert, nur die Zutatenliste):
+
+- `wraps-mit-fuellung`: "100g Gemüse + 15ml Öl" war als **eine** Zutat mit
+  115g und `mittel=rapsoel` erfasst — dadurch rechnete die Prüfung
+  fälschlich 115g reines Öl statt 15g Öl + 100g unbewertetes Gemüse.
+  Aufgeteilt in zwei Zutaten.
+- `couscous-mit-gefluegel-und-tomatensalat`: "100g roher Couscous pro
+  Person" war im Kochbuch eine beschreibende Kopfzeile (Mengenverhältnis),
+  wurde aber zusätzlich zur tatsächlichen Zutat "1 große Tasse Couscous"
+  (180g) als eigene Zutat mitgezählt — Couscous wurde doppelt gezählt.
+  Die redundante Zeile entfernt.
+
+**Zuordenbare Zutaten (Coverage) vorher/nachher:**
+
+```
+vorher (Ende Fix-Runde 1):  272/626 (43 %)
+nachher (Fix-Runde 2):      546/626 (87 %)
+```
+
+**Kochbuch-Einzelfiguren rekonstruiert statt neu geraten:** Für 13 der 15
+Rezepte ohne jede Kochbuch-kcal-Angabe (aus der ersten Übertragung) ist die
+jetzt viel vollständigere Zutatensumme eine deutlich bessere Rekonstruktion
+als die Runde-1-Schätzung aus wenigen zugeordneten Anreicherungsmitteln —
+`kcal_pro_portion` wurde entsprechend aktualisiert (Details im
+Task-Report). `falscher-joghurt-2` und `kartoffelbrei-plus` waren bereits
+gut geschätzt und blieben unverändert.
+
+**Ergebnis des Abnahmegates nach Fix-Runde 2:**
+
+```
+Zutaten zuordenbar: 546/626 (87%)
+Strukturfehler: 0
+Notizen: 42, davon nicht pruefbar: 0
+```
+
+Alle 42 verbleibenden Notizen wurden einzeln durchgesehen. In praktisch
+allen Fällen ist die Kochbuchangabe ein echter Buchwert (Fußnote, Spanne,
+Dichte oder Summe der Einzelangaben — nicht erraten), und die jetzt
+sichtbare Differenz ist normale Varianz zwischen Standardtabellenwerten
+und den kochbucheigenen Annahmen für dieselben Grundzutaten (z. B. eine
+andere Kartoffel- oder Nudelsorte) — keine neue Rechenschwäche, sondern
+genau das, wofür die Toleranzprüfung gebaut ist. Unzugeordnet bleiben nach
+Fix-Runde 2 fast nur noch Gewürze, Wasser und einzelne Markenprodukte
+(This-is-Food, Oatsome, EnergeaP Kids, Fruchtquatsch).
+
+Der Bandcheck (100–1600 kcal/Portion) bleibt bei denselben zwei erklärten
+Treffern wie am Ende von Fix-Runde 1 (`ueberbackener-gemueseauflauf-mit-
+sojawuerfeln`, `glueckskugeln`) — keine der Fix-Runde-2-Änderungen hat
+einen neuen Bandtreffer erzeugt.
 
 ## Schritt 5: Anreicherungstabelle gegen Produkte abgleichen
 

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 STANDARD_TABELLE = Path(__file__).resolve().parent.parent / "referenz" / "anreicherung.json"
+STANDARD_GRUNDZUTATEN = Path(__file__).resolve().parent.parent / "referenz" / "grundzutaten.json"
 
 
 class AnreicherungFehler(Exception):
@@ -70,6 +71,35 @@ def lade_mittel(datei: Path | None = None) -> dict[str, Mittel]:
             einsatz=eintrag["einsatz"],
             hinweis=eintrag.get("hinweis"),
             warnung=eintrag.get("warnung"),
+        )
+        for schluessel, eintrag in roh.items()
+    }
+
+
+def lade_grundzutaten(datei: Path | None = None) -> dict[str, Mittel]:
+    """Liest die Grundzutaten-Tabelle (Staples, mit denen gerechnet wird).
+
+    Anders als die Anreicherungstabelle (Dinge, die man einem Gericht
+    zusetzt) sind das Zutaten, aus denen ein Gericht besteht -- Kartoffeln,
+    Nudeln, Zwiebeln, Hackfleisch und Aehnliches. Beide Tabellen bleiben
+    getrennt: die Anreicherungslogik darf niemals eine Grundzutat als
+    Zusatz vorschlagen (z.B. 200g rohes Mehl in eine Suppe ruehren).
+    """
+    datei = STANDARD_GRUNDZUTATEN if datei is None else datei
+    roh = json.loads(datei.read_text(encoding="utf-8"))
+    return {
+        schluessel: Mittel(
+            id=schluessel,
+            name=eintrag["name"],
+            kcal_100g=float(eintrag["kcal_100g"]),
+            dichte_g_ml=(
+                None if eintrag.get("dichte_g_ml") is None
+                else float(eintrag["dichte_g_ml"])
+            ),
+            neutral=False,
+            einsatz="",
+            hinweis=None,
+            warnung=None,
         )
         for schluessel, eintrag in roh.items()
     }

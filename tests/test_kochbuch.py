@@ -5,10 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fbt.anreicherung import lade_mittel
+from fbt.anreicherung import lade_grundzutaten, lade_mittel
 from fbt.kochbuch import lade_kochbuch, plausibilitaet, pruefe_rezept
 
 TABELLE = Path(__file__).resolve().parent.parent / "referenz" / "anreicherung.json"
+GRUNDZUTATEN = Path(__file__).resolve().parent.parent / "referenz" / "grundzutaten.json"
 
 GUELTIG = {
     "titel": "Testshake",
@@ -92,6 +93,40 @@ class PlausibilitaetTest(unittest.TestCase):
         notiz = plausibilitaet(ohne, self.mittel)
         self.assertIsNotNone(notiz)
         self.assertIn("nicht pruefbar", notiz)
+
+    def test_grundzutaten_machen_ein_reines_staple_rezept_pruefbar(self):
+        # Ein Rezept nur aus Grundzutaten (Kartoffeln, Zwiebel) ist ueber die
+        # Anreicherungstabelle allein "nicht pruefbar", wird aber zu einem
+        # echten Befund, sobald die Grundzutaten-Tabelle mit herangezogen wird.
+        grund = lade_grundzutaten(GRUNDZUTATEN)
+        nur_staples = {
+            **GUELTIG,
+            "kcal_pro_portion": 100,
+            "zutaten": [
+                {"menge": 200, "einheit": "g", "was": "Kartoffeln", "mittel": "kartoffeln"},
+                {"menge": 100, "einheit": "g", "was": "Zwiebel", "mittel": "zwiebel"},
+            ],
+        }
+        notiz = plausibilitaet(nur_staples, self.mittel, grund)
+        self.assertIsNotNone(notiz)
+        self.assertNotIn("nicht pruefbar", notiz)
+
+    def test_grundzutaten_aendern_nichts_wenn_nichts_zuordenbar_ist(self):
+        # Stehen Zutaten in keiner der beiden Tabellen, bleibt es "nicht
+        # pruefbar" -- die zweite Tabelle erweitert die Abdeckung, erfindet
+        # aber keine.
+        grund = lade_grundzutaten(GRUNDZUTATEN)
+        ohne = {**GUELTIG, "zutaten": [{"menge": 200, "einheit": "g", "was": "Einhornstaub"}]}
+        notiz = plausibilitaet(ohne, self.mittel, grund)
+        self.assertIsNotNone(notiz)
+        self.assertIn("nicht pruefbar", notiz)
+
+    def test_plausibilitaet_ohne_drittes_argument_bleibt_rueckwaertskompatibel(self):
+        # Bestehende Aufrufe mit nur (roh, mittel) muessen unveraendert
+        # funktionieren.
+        self.assertIsNone(plausibilitaet(GUELTIG, self.mittel))
+        notiz = plausibilitaet({**GUELTIG, "kcal_pro_portion": 900}, self.mittel)
+        self.assertIsNotNone(notiz)
 
 
 class LadenTest(unittest.TestCase):

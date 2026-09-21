@@ -3,9 +3,10 @@
 import unittest
 from pathlib import Path
 
-from fbt.anreicherung import AnreicherungFehler, lade_mittel
+from fbt.anreicherung import AnreicherungFehler, lade_grundzutaten, lade_mittel
 
 TABELLE = Path(__file__).resolve().parent.parent / "referenz" / "anreicherung.json"
+GRUNDZUTATEN = Path(__file__).resolve().parent.parent / "referenz" / "grundzutaten.json"
 
 
 class TabelleTest(unittest.TestCase):
@@ -68,6 +69,25 @@ class RechnenTest(unittest.TestCase):
     def test_lehnt_negative_menge_ab(self):
         with self.assertRaises(AnreicherungFehler):
             self.mittel["butter"].kcal(-5, "g")
+
+
+class GrundzutatenTest(unittest.TestCase):
+    def setUp(self):
+        self.grund = lade_grundzutaten(GRUNDZUTATEN)
+
+    def test_laedt_die_datei(self):
+        self.assertTrue(self.grund)
+        self.assertIn("kartoffeln", self.grund)
+
+    def test_alle_eintraege_sind_plausibel(self):
+        # Grundzutaten sind Zutaten, aus denen gerechnet wird, keine
+        # Anreicherungsmittel -- trotzdem gilt dieselbe Plausibilitaetsgrenze:
+        # ueber 900 kcal/100g ist ein Tippfehler, nicht ein Lebensmittel.
+        for schluessel, m in self.grund.items():
+            with self.subTest(grundzutat=schluessel):
+                self.assertTrue(m.name)
+                self.assertGreater(m.kcal_100g, 0)
+                self.assertLessEqual(m.kcal_100g, 900)
 
 
 if __name__ == "__main__":

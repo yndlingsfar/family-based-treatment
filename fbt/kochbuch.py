@@ -96,24 +96,34 @@ def pruefe_rezept(roh: dict) -> list[str]:
     return fehler
 
 
-def plausibilitaet(roh: dict, mittel: dict) -> str | None:
+def plausibilitaet(roh: dict, mittel: dict, grund: dict | None = None) -> str | None:
     """Vergleicht die angegebenen Kalorien mit der Summe der zuordenbaren Zutaten.
+
+    Sucht jeden Zutaten-Schluessel zuerst in der Anreicherungstabelle
+    (`mittel`), dann in der Grundzutaten-Tabelle (`grund`) -- Dinge, die
+    zugesetzt werden, und Dinge, aus denen das Gericht besteht, bleiben
+    getrennte Tabellen, werden hier aber gemeinsam zum Pruefen herangezogen.
 
     Gibt None zurueck, wenn beides zusammenpasst. Sonst eine Notiz. Laesst sich
     keine Zutat zuordnen, wird das ausdruecklich gesagt — eine Pruefung, die
     nichts geprueft hat, darf nicht wie eine bestandene aussehen.
     """
+    grund = grund or {}
     summe = 0.0
     zugeordnet = 0
     for zutat in roh.get("zutaten", []):
         schluessel = zutat.get("mittel")
-        if schluessel is None or schluessel not in mittel:
+        if schluessel in mittel:
+            tabelle = mittel
+        elif schluessel in grund:
+            tabelle = grund
+        else:
             continue
         einheit = zutat.get("einheit")
         if einheit not in ("g", "ml"):
             continue
         try:
-            summe += mittel[schluessel].kcal(zutat["menge"], einheit)
+            summe += tabelle[schluessel].kcal(zutat["menge"], einheit)
         except Exception:  # noqa: BLE001 — Fehlerdetails haengen am Mittel
             continue
         zugeordnet += 1
