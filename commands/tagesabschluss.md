@@ -9,6 +9,20 @@ Argument heute.
 Das ist ein Gespräch zwischen den Eltern. Nicht am Tisch, nicht mit dem Kind
 im Raum — die Elternansicht enthält Zahlen.
 
+Alle Python-Aufrufe mit `PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}"` beginnen —
+sonst findet Python die Module unter `fbt/` nicht, weil sie im
+Plugin-Verzeichnis liegen und nicht im Arbeitsordner der Eltern.
+
+**Was dieser Befehl nicht leistet:** Er hält fest, was war, und bereitet
+morgen vor. Eine laufende Mahlzeit begleitet er nicht — dafür gibt es dieses
+Werkzeug noch nicht. Schreibt jemand mitten in einer eskalierenden Mahlzeit
+hier hinein, sag das zuerst und in einem Satz: Hilfe im Moment kommt aus dem,
+was mit dem Elternnetzwerk und der Praxis besprochen ist, nicht aus diesem
+Chat. Und die oben abgefragten Warnzeichen gelten jederzeit, nicht nur am
+Abend: bei Ohnmacht, Erbrechen, Selbstverletzung oder Äußerungen über Suizid
+sofort den unten genannten Weg gehen (Praxis, außerhalb der Sprechzeiten die
+Kinderklinik, bei Suizidalität Notaufnahme oder 112).
+
 Ablauf:
 
 1. **Zuerst fragen, nicht darauf warten, dass es erwähnt wird.** Noch bevor
@@ -43,7 +57,10 @@ Ablauf:
 
 2. Tagesdatei laden (`fbt.bilanz.lade_tag`). Fehlt sie, frage, was es gab, und
    lege sie nach `referenz/tag.vorlage.toml` an, statt den Tag unbeurteilt zu
-   lassen.
+   lassen. Lehnt der Loader die Datei ab (Tippfehler im Schlüssel, Text statt
+   Zahl, `anteil_gegessen` außerhalb 0.0–1.0), nenne die Meldung wörtlich und
+   korrigiere die Datei — **niemals die Zahl im Kopf ersetzen und weiterrechnen**.
+   Die Meldung nennt Datei und Stelle; genau dafür ist sie da.
 3. Für jede Mahlzeit fragen, wie viel angekommen ist. `anteil_gegessen`
    zwischen 0.0 und 1.0 — eine Schätzung der Eltern, und sie darf eine
    Schätzung bleiben. Nicht auf einer Genauigkeit bestehen, die niemand hat.
@@ -55,7 +72,7 @@ Ablauf:
    erzeugen lassen, nicht von Hand nachbauen** — die Funktion ist die einzige
    Stelle, die garantiert, dass keine Zahl verloren oder verdoppelt wird.
    Zum Beispiel:
-   `python3 -c "from datetime import date; from fbt.bilanz import lade_tag, elternansicht; print(elternansicht(lade_tag(date(2026, 1, 1))))"`
+   `PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}" python3 -c "from datetime import date; from fbt.bilanz import lade_tag, elternansicht; print(elternansicht(lade_tag(date(2026, 1, 1))))"`
    (Datum durch das tatsächliche Tagesdatum ersetzen.)
 6. Gerichte ohne Kalorienangabe (`unbekannte` in der Bilanz) benennen. Sie
    wurden nicht als 0 gerechnet, sondern fehlen aus der Summe — sag das

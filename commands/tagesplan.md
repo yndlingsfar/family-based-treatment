@@ -8,6 +8,18 @@ oder ein Datum (JJJJ-MM-TT). Ohne Argument: morgen.
 
 Nutze die Skill `mahlzeit-planen`.
 
+Alle Python-Aufrufe mit `PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}"` beginnen —
+sonst findet Python die Module unter `fbt/` nicht, weil sie im
+Plugin-Verzeichnis liegen und nicht im Arbeitsordner der Eltern.
+
+**Was dieser Befehl nicht leistet:** Er plant und schreibt auf. Eine laufende
+Mahlzeit begleitet er nicht. Steht gerade der volle Teller auf dem Tisch und
+es eskaliert, hilft hier kein Chat, sondern das, was mit dem Elternnetzwerk
+und der Praxis besprochen ist. Bei Ohnmacht, Erbrechen, Selbstverletzung oder
+Äußerungen über Suizid: Praxis, außerhalb der Sprechzeiten die Kinderklinik,
+bei Suizidalität sofort Notaufnahme oder 112. Das gilt auch mitten in einem
+Planungsgespräch — sag es dann zuerst und plane nicht weiter.
+
 Ablauf:
 
 1. Profil laden (`fbt.daten.lade_profil`). Fehlt `kcal_taeglich`, frage danach
@@ -34,9 +46,13 @@ Ablauf:
    Zahlen) drucken. Die Funktion garantiert, dass keine Zahl durchrutscht;
    von Hand nachformuliert geht das irgendwann schief. Zeig zuerst die
    Elternansicht, dann die Tischansicht — und schreibe die Tischansicht
-   zusätzlich nach `$FBT_DATEN/tage/JJJJ-MM-TT-tisch.txt`, damit sie
-   ausgedruckt oder auf einem eigenen Gerät geöffnet werden kann. Diesen
-   Bildschirm, auf dem die Elternansicht steht, dem Kind nie zeigen.
+   zusätzlich als Datei nach `~/Desktop/JJJJ-MM-TT-tisch.txt` (oder ins
+   aktuelle Arbeitsverzeichnis), damit sie ausgedruckt oder auf einem
+   eigenen Gerät geöffnet werden kann. **Nicht nach `$FBT_DATEN`:** dort
+   liegen alle Tagesdateien mit `kcal_geplant`, der Gewichtsverlauf und das
+   Profil. Wer das Kind auf diesen Ordner schickt, zeigt ihm den Weg in die
+   Kalorienakte. Diesen Bildschirm, auf dem die Elternansicht steht, dem
+   Kind nie zeigen.
 6. Fragen, ob die fehlenden Zutaten in die Cookidoo-Einkaufsliste sollen.
    `cookidoo_add_recipe_ingredients` (für tatsächlich gekochte
    Cookidoo-Rezepte — es nimmt alle Zutaten des Rezepts, nicht nur die

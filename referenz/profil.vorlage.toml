@@ -1,6 +1,13 @@
 # Vorlage fuer $FBT_DATEN/profil.toml
 # Diese Datei gehoert NICHT ins Repository, sondern ins Datenverzeichnis.
 # Alles hier ist Beispiel und muss ersetzt werden.
+#
+# WO das Datenverzeichnis liegt, ist eine Entscheidung ueber Zugriff: Es
+# enthaelt Gewicht, Ziel und jede Kalorienzahl. Es darf nicht in einer
+# iCloud- oder sonstigen Cloud-Ablage liegen, in der das Kind selbst
+# angemeldet ist — sonst steht der gesamte Kalorienverlauf auf seinem Geraet.
+# Ein eigener Elternaccount (oder ein lokaler Ordner ausserhalb der
+# Familienfreigabe) und FBT_DATEN entsprechend gesetzt.
 
 [kind]
 rufname = "Vorname"

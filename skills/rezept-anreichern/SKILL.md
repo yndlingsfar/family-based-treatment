@@ -5,6 +5,14 @@ description: Use when a recipe needs to reach a higher calorie target for refeed
 
 # Ein Rezept anreichern
 
+## Voraussetzungen
+
+Die Module unter `fbt/` liegen im Plugin-Verzeichnis, nicht im Arbeitsordner
+der Eltern. Ohne Pfadangabe findet Python sie nicht (`ModuleNotFoundError: No
+module named 'fbt'`). Deshalb **jeden** Aufruf mit
+`PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}"` beginnen — `CLAUDE_PLUGIN_ROOT` setzt
+Claude Code selbst, `:-.` ist der Rückfall beim Arbeiten im Repository.
+
 ## Rechnen, nicht schätzen
 
 `refeeding_phase=True` ist die Vorgabe, solange nicht ausdrücklich geklärt
@@ -18,12 +26,14 @@ statt annehmen, wenn unklar ist, ob die ersten zwei Wochen vorbei sind.
 `anreichern` erwartet ein Dict mit denselben Feldnamen — erst umbauen:
 
 ```bash
-python3 -c "
+PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}" python3 -c "
 from fbt.anreicherung import lade_mittel
 from fbt.anreichern import anreichern
 from fbt.kochbuch import lade_kochbuch
 
-r = lade_kochbuch()['power-porridge']
+# Der Schluessel ist die Rezept-ID aus kochbuch.json, nicht der Titel —
+# im Zweifel erst mit list(lade_kochbuch()) nachsehen.
+r = lade_kochbuch()['power-porridge-schnelle-variante']
 rezept = {'portionen': r.portionen, 'kcal_pro_portion': r.kcal_pro_portion,
           'zutaten': list(r.zutaten)}
 e = anreichern(rezept, 700, lade_mittel(), refeeding_phase=True)

@@ -932,3 +932,78 @@ OK
 47/47 grün, unverändert — auch diese Runde brauchte nur eine
 Wort-Änderung im Code (die Fehlermeldung), keine strukturelle
 Code-Änderung.
+
+## Fix-Runde 6: eine verdoppelte Menge, ein Saft als Gemüse, und eine Prüfung, die ihre Lücken nennt
+
+Aus dem Zweig-Review von Stufe 1, zusammen mit den Code-Korrekturen in
+`fbt/kochbuch.py`.
+
+### Die Prüfung nennt jetzt, was sie nicht rechnen konnte
+
+`plausibilitaet()` übersprang bisher stumm jede Zutat mit einer anderen
+Einheit als `g`/`ml` (und jeden Umrechnungsfehler). Über alle 79 Rezepte
+betrifft das **14 Zutaten in 11 Rezepten** — fast durchgehend Eier und
+Eigelb, bei einem Rezept zusätzlich sein mengenmäßig größter Bestandteil.
+Bei diesem einen Rezept bestand die gemeldete Abweichung damit zu einem
+guten Teil aus der Lücke der Prüfung selbst. Die Notiz benennt die
+Ausfälle jetzt mit Anzahl, Grund und Namen, und ein Rezept, das innerhalb
+der Toleranz liegt, aber nicht vollständig gerechnet werden konnte, gilt
+nicht mehr als glatt bestanden.
+
+Folge für die Zahlen: **Notizen 40 → 44**. Die vier neuen Notizen sind
+reine Transparenz-Notizen ("innerhalb der Toleranz, aber nicht vollständig
+gerechnet"), keine neuen Zweifel an einer kcal-Angabe. Zwei der vier
+Rezepte trugen bisher `pruefen: false` und haben jetzt `pruefen: true`
+mit einer Notiz, die genau das sagt — `unkommentiert` bleibt damit 0.
+
+### Eine Übertragung nahm die obere Grenze einer Spanne
+
+`gebackener-blumenkohl-mit-limetten-aioli`: Das Kochbuch nennt eine
+Spanne von einem oder zwei Blumenkohlköpfen und die Buttermenge
+ausdrücklich **pro Kopf**. Übertragen worden war die obere Grenze, also
+die doppelte Buttermenge — während die Fußnote desselben Rezepts von
+2 Portionen spricht, also von einem Kopf. Auf einen Kopf korrigiert;
+Aioli und Panade stehen im Kochbuch einmalig und wurden nicht
+mitskaliert. Die kcal-Angabe stammt aus der Fußnote und blieb
+unverändert.
+
+| | vorher | nachher |
+|---|---:|---:|
+| zugeordnete Zutaten | 4920 kcal | 3067 kcal |
+| Abweichung zur Fußnote (2500 kcal) | 49 % | 18 % |
+
+### Ein Saft zum Preis des Gemüses
+
+`orangen-moehren-shake` buchte Möhrensaft auf `karotten` (rohe Möhre).
+Neuer Eintrag `moehrensaft` in `referenz/grundzutaten.json` (38 kcal/100 g,
+Dichte 1.04) und umgestellt, samt Einheit `ml` wie im Kochbuchtext. Der
+kalorische Unterschied ist klein (zugeordnete Summe 680 → 678 kcal); die
+Zuordnung ist jetzt aber die, die dasteht. Die große, weiterhin ungeklärte
+Abweichung dieses Rezepts zur Fußnote bleibt unverändert bestehen und
+steht so in der `pruefnotiz`.
+
+### Ergebnis des Abnahmegates nach Fix-Runde 6
+
+```
+Rezepte gesamt: 79
+Zutaten gesamt: 628
+zuordenbar (inkl. stueck): 546/628 (87%)
+echt berechenbar: 532/628 (85%)
+Strukturfehler: 0
+Notizen: 44, davon nicht pruefbar: 0
+unkommentiert: 0
+portionen_geschaetzt: 53
+zeit_min_geschaetzt: 79
+
+ausserhalb 100-1600 kcal/Portion: 2
+  glueckskugeln                                  80 kcal x6
+  ueberbackener-gemueseauflauf-mit-sojawuerfeln  1666 kcal x5
+
+>50-%-Sweep: 23 Treffer
+```
+
+Band-Check unverändert bei den zwei bereits erklärten, kochbuchbelegten
+Ausnahmen. Der >50-%-Sweep bleibt bei denselben 23 Treffern wie in
+Fix-Runde 4 (alle dort einzeln als legitim geprüft); beim korrigierten
+Blumenkohl-Rezept sinkt der Butteranteil von 75 % auf 60 % und bleibt aus
+demselben Grund legitim — die Butter ist das Ausbackfett.

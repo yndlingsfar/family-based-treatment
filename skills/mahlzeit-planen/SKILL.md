@@ -5,9 +5,34 @@ description: Use when planning meals for a day of family-based refeeding - build
 
 # Einen Tag planen
 
+## Voraussetzungen
+
+Die Module unter `fbt/` liegen im Plugin-Verzeichnis, nicht im Arbeitsordner
+der Eltern. Ohne Pfadangabe findet Python sie nicht (`ModuleNotFoundError: No
+module named 'fbt'`). Deshalb **jeden** Aufruf so beginnen:
+
+```bash
+PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}" python3 -c "..."
+```
+
+`CLAUDE_PLUGIN_ROOT` setzt Claude Code selbst; `:-.` ist der Rückfall für den
+Fall, dass direkt im Repository gearbeitet wird.
+
+## Was diese Stufe nicht tut
+
+Stufe 1 **plant und protokolliert** — sie begleitet keine laufende Mahlzeit.
+Wenn gerade ein voller Teller auf dem Tisch steht und es eskaliert, ist dieses
+Werkzeug nicht die Hilfe: dann gilt, was im Elternnetzwerk und mit der Praxis
+besprochen ist (ruhig bleiben, bei der Mahlzeit bleiben, später essen lassen,
+Ersatz in flüssiger Form anbieten), nicht ein Chat. Geht es um Ohnmacht,
+Erbrechen, Selbstverletzung oder Äußerungen über Suizid: Praxis, außerhalb der
+Sprechzeiten die Kinderklinik, bei Suizidalität sofort Notaufnahme oder 112.
+Sag das offen, statt im Moment der Eskalation eine Planungsantwort zu geben.
+
 ## Vorab immer
 
-1. Profil laden: `python3 -c "from fbt.daten import lade_profil; p = lade_profil(); print(p)"`
+1. Profil laden:
+   `PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}" python3 -c "from fbt.daten import lade_profil; p = lade_profil(); print(p)"`
 2. **Fehlt `kcal_taeglich`, frage danach und plane nicht auf einer erfundenen Zahl.**
    Die Menge gibt die Ärztin vor. Ohne sie kannst du Mahlzeiten vorschlagen, aber
    nicht behaupten, der Tag sei ausreichend. Steht in `kcal_quelle` ein Hinweis,
@@ -73,9 +98,17 @@ Hand nachbauen — nur so ist sichergestellt, dass keine Zahl durchrutscht:
    den Kühlschrank, und nie auf dem Bildschirm, wenn das Kind mitliest.
 2. **Tischansicht** (`fbt.bilanz.tischansicht(tagesbilanz)`) — nur Uhrzeit und
    was es gibt. Keine Kalorien, kein Gewicht, kein Ziel. Schreibe sie
-   zusätzlich nach `$FBT_DATEN/tage/JJJJ-MM-TT-tisch.txt`, damit sie
-   ausgedruckt oder auf einem eigenen Gerät geöffnet werden kann, ohne dass
-   jemand auf den Bildschirm mit der Elternansicht sieht.
+   zusätzlich als Datei, damit sie ausgedruckt oder auf einem eigenen Gerät
+   geöffnet werden kann, ohne dass jemand auf den Bildschirm mit der
+   Elternansicht sieht — **aber niemals nach `$FBT_DATEN`**. Standard:
+   `~/Desktop/JJJJ-MM-TT-tisch.txt`, sonst das aktuelle Arbeitsverzeichnis.
+   Das Datenverzeichnis enthält jede Tagesdatei mit `kcal_geplant`, den
+   Gewichtsverlauf und das Profil. Einen Pfad dorthin weiterzugeben heißt,
+   dem Kind den Weg in die Kalorienakte zu zeigen — und ein Kind mit
+   Anorexie geht diesen Weg. Die Tischansicht ist die eine Ausgabe, die das
+   Kind sehen darf; sie gehört deshalb genau dorthin, wo sonst nichts liegt.
+   `tischansicht` bricht ab, wenn ein Gerichttitel eine Kalorienangabe trägt
+   — dann gehört die Zahl aus dem Titel in der Tagesdatei entfernt.
 
 Schreibe den Plan als `$FBT_DATEN/tage/JJJJ-MM-TT.toml` nach dem Muster in
 `referenz/tag.vorlage.toml`. **Alle Schlüssel auf oberster Ebene vor die erste
