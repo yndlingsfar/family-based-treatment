@@ -170,6 +170,74 @@ name = "Fruehstueck"
 """
 
 
+KOPF = """
+datum = 2026-02-03
+ziel_kcal = 2000
+
+[[mahlzeit]]
+zeit = "07:30"
+name = "Fruehstueck"
+
+  [[mahlzeit.gericht]]
+  titel = "Porridge"
+  quelle = "kochbuch:porridge"
+"""
+
+
+def mit_gericht(*zeilen: str) -> str:
+    """KOPF mit zusaetzlichen Zeilen im ersten Gericht."""
+    return KOPF + "".join(f"  {z}\n" for z in zeilen)
+
+
+OHNE_MAHLZEIT = """
+datum = 2026-02-03
+ziel_kcal = 2000
+beobachtungen = "Ein ganz normaler Tag."
+"""
+
+MAHLZEIT_PLURAL = """
+datum = 2026-02-03
+ziel_kcal = 2000
+
+[[mahlzeiten]]
+zeit = "07:30"
+name = "Fruehstueck"
+
+  [[mahlzeiten.gericht]]
+  titel = "Porridge"
+  kcal_geplant = 800
+  anteil_gegessen = 1.0
+"""
+
+GERICHTE_PLURAL = """
+datum = 2026-02-03
+ziel_kcal = 2000
+
+[[mahlzeit]]
+zeit = "07:30"
+name = "Fruehstueck"
+
+  [[mahlzeit.gerichte]]
+  titel = "Porridge"
+  kcal_geplant = 800
+"""
+
+KCAL_IM_TITEL = """
+datum = 2026-02-03
+ziel_kcal = 2000
+
+[[mahlzeit]]
+zeit = "18:00"
+name = "Abendessen"
+
+  [[mahlzeit.gericht]]
+  titel = "Kaesepolenta (1250 kcal)"
+  quelle = "kochbuch:kaesepolenta-mit-joghurt"
+  kcal_geplant = 1250
+  anteil_gegessen = 1.0
+"""
+
+
 def schreibe(inhalt: str) -> Path:
     basis = Path(tempfile.mkdtemp()) / "FBT Daten"
     (basis / "tage").mkdir(parents=True)
@@ -335,6 +403,90 @@ class AnsichtTest(unittest.TestCase):
         text = elternansicht(b)
         self.assertIn("Ohne Angabe, als vollstaendig gerechnet:", text)
         self.assertIn("Fruehstueck: Porridge", text)
+
+
+class PruefungTest(unittest.TestCase):
+    """Die Tagesdatei wird von Hand getippt — jeder Tippfehler muss auffallen.
+
+    Alle Faelle hier sind am Zweig reproduziert worden und ergaben vorher
+    entweder eine falsche Zahl im Arztbericht oder einen rohen Traceback.
+    """
+
+    def laden(self, inhalt: str):
+        from fbt.daten import DatenFehler
+        with self.assertRaises(DatenFehler) as ctx:
+            lade_tag(date(2026, 2, 3), schreibe(inhalt))
+        meldung = str(ctx.exception)
+        self.assertIn("2026-02-03.toml", meldung,
+                      "Jede Meldung muss die Datei nennen, damit die Eltern sie finden.")
+        return meldung
+
+    def test_ziel_kcal_true_wird_nicht_zu_eins(self):
+        # bool ist eine int-Unterklasse: true waere sonst ein Ziel von 1 kcal.
+        meldung = self.laden(KOPF.replace("ziel_kcal = 2000",
+                                          "ziel_kcal = true"))
+        self.assertIn("ziel_kcal", meldung)
+        self.assertIn("true/false", meldung)
+
+    def test_kcal_geplant_true_wird_nicht_zu_eins(self):
+        meldung = self.laden(mit_gericht("kcal_geplant = true"))
+        self.assertIn("kcal_geplant", meldung)
+        self.assertIn("Porridge", meldung)
+
+    def test_ziel_kcal_als_text_ist_ein_fehler_keine_ausnahme(self):
+        meldung = self.laden(KOPF.replace("ziel_kcal = 2000",
+                                          'ziel_kcal = "2000"'))
+        self.assertIn("ziel_kcal", meldung)
+
+    def test_kcal_geplant_als_text_ist_ein_fehler_keine_ausnahme(self):
+        meldung = self.laden(mit_gericht('kcal_geplant = "ca. 800"'))
+        self.assertIn("kcal_geplant", meldung)
+        self.assertIn("str", meldung)
+
+    def test_anteil_ueber_eins_erfindet_keine_kalorien(self):
+        meldung = self.laden(mit_gericht("kcal_geplant = 800",
+                                         "anteil_gegessen = 1.5"))
+        self.assertIn("anteil_gegessen", meldung)
+        self.assertIn("Porridge", meldung)
+
+    def test_negativer_anteil_kuerzt_nicht_andere_mahlzeiten_weg(self):
+        meldung = self.laden(mit_gericht("kcal_geplant = 800",
+                                         "anteil_gegessen = -0.5"))
+        self.assertIn("anteil_gegessen", meldung)
+
+    def test_datum_als_text_ist_ein_fehler_keine_ausnahme(self):
+        meldung = self.laden(KOPF.replace("datum = 2026-02-03",
+                                          'datum = "2026-02-03"'))
+        self.assertIn("datum", meldung)
+
+    def test_fehlende_mahlzeiten_sind_nicht_null_kalorien(self):
+        meldung = self.laden(OHNE_MAHLZEIT)
+        self.assertIn("mahlzeit", meldung)
+
+    def test_mahlzeiten_im_plural_wird_als_tippfehler_erkannt(self):
+        meldung = self.laden(MAHLZEIT_PLURAL)
+        self.assertIn("mahlzeiten", meldung)
+
+    def test_gerichte_im_plural_wird_als_tippfehler_erkannt(self):
+        meldung = self.laden(GERICHTE_PLURAL)
+        self.assertIn("gerichte", meldung)
+
+    def test_gueltige_datei_bleibt_gueltig(self):
+        b = lade_tag(date(2026, 2, 3), schreibe(TAG))
+        self.assertEqual(b.kcal_tatsaechlich, 1100)
+
+
+class TischansichtSchutzTest(unittest.TestCase):
+    def test_kalorienangabe_im_titel_bricht_ab(self):
+        from fbt.daten import DatenFehler
+        b = lade_tag(date(2026, 2, 3), schreibe(KCAL_IM_TITEL))
+        with self.assertRaises(DatenFehler) as ctx:
+            tischansicht(b)
+        self.assertIn("Kaesepolenta", str(ctx.exception))
+
+    def test_titel_ohne_zahl_geht_durch(self):
+        b = lade_tag(date(2026, 2, 3), schreibe(TAG))
+        self.assertIn("Porridge", tischansicht(b))
 
 
 if __name__ == "__main__":

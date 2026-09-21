@@ -11,12 +11,23 @@ kann.
 
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from fbt.daten import DatenFehler, daten_pfad
+
+# Die Tagesdatei wird von Hand getippt. Jeder Schluessel, der hier nicht steht,
+# ist ein Tippfehler — und ein Tippfehler in 'mahlzeit' wuerde einen normalen
+# Tag als "nichts gegessen" in den Arztbericht tragen.
+ERLAUBT_TAG = ("datum", "ziel_kcal", "beobachtungen", "mahlzeit")
+ERLAUBT_MAHLZEIT = ("zeit", "name", "gericht")
+ERLAUBT_GERICHT = ("titel", "quelle", "kcal_geplant", "anteil_gegessen")
+
+# Eine Kalorienzahl im Titel landet ueber die Tischansicht vor dem Kind.
+KCAL_IM_TITEL = re.compile(r"\d+\s*(kcal|kj)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -78,6 +89,89 @@ class Tagesbilanz:
         return not self.unbekannte and not self.angenommen
 
 
+def _fremde_schluessel(abschnitt: dict, erlaubt: tuple[str, ...], wo: str,
+                       datei: Path) -> None:
+    """Lehnt jeden Schluessel ab, der nicht in der Vorlage steht.
+
+    Das faengt Beinahe-Treffer wie 'mahlzeiten', 'gerichte' oder 'Mahlzeit' —
+    sie wuerden sonst stillschweigend als "nicht vorhanden" gelesen, und aus
+    "nichts aufgeschrieben" wuerde "nichts gegessen".
+    """
+    fremd = sorted(s for s in abschnitt if s not in erlaubt)
+    if fremd:
+        raise DatenFehler(
+            f"{datei}: unbekannter Schluessel '{fremd[0]}' {wo}"
+            + (f" (ausserdem: {', '.join(fremd[1:])})" if len(fremd) > 1 else "")
+            + f". Erlaubt sind hier nur: {', '.join(erlaubt)}. "
+            f"Ein Tippfehler wie 'mahlzeiten' statt 'mahlzeit' wuerde sonst "
+            f"als 'nichts gegessen' gelesen. Siehe referenz/tag.vorlage.toml."
+        )
+
+
+def _zahl(abschnitt: dict, schluessel: str, wo: str, datei: Path, *,
+          ganz: bool = False, min_wert: float | None = None,
+          max_wert: float | None = None) -> float | int | None:
+    """Holt eine optionale Zahl und prueft ihren Typ, statt sie umzuwandeln.
+
+    Fehlt der Schluessel, ist das None und niemals 0 — eine fehlende Angabe
+    ist keine Null. Steht dort etwas, das keine Zahl ist, sagt die Meldung
+    Datei, Ort und Wert, damit ein Elternteil die Stelle findet.
+    """
+    if schluessel not in abschnitt:
+        return None
+    wert = abschnitt[schluessel]
+    # bool ist in Python eine int-Unterklasse; ohne diese Zeile wuerde
+    # 'true' zu 1 kcal und saehe wie eine gemessene Angabe aus.
+    if isinstance(wert, bool):
+        raise DatenFehler(
+            f"{datei}: '{schluessel}' {wo} muss eine Zahl sein, nicht "
+            f"true/false. Aus 'true' wuerde sonst die Zahl 1."
+        )
+    if not isinstance(wert, int if ganz else (int, float)):
+        raise DatenFehler(
+            f"{datei}: '{schluessel}' {wo} muss eine "
+            f"{'ganze Zahl' if ganz else 'Zahl'} sein, ist "
+            f"{type(wert).__name__} ({wert!r}). Zahlen gehoeren ohne "
+            f"Anfuehrungszeichen und ohne Zusaetze wie 'ca.' in die Datei."
+        )
+    if min_wert is not None and wert < min_wert:
+        raise DatenFehler(
+            f"{datei}: '{schluessel}' {wo} ist {wert}, erlaubt ist "
+            f"{min_wert} bis {max_wert if max_wert is not None else 'aufwaerts'}."
+        )
+    if max_wert is not None and wert > max_wert:
+        raise DatenFehler(
+            f"{datei}: '{schluessel}' {wo} ist {wert}, erlaubt ist "
+            f"{min_wert if min_wert is not None else 'hoechstens'} bis {max_wert}."
+        )
+    return wert
+
+
+def _text(abschnitt: dict, schluessel: str, wo: str, datei: Path) -> str | None:
+    if schluessel not in abschnitt:
+        return None
+    wert = abschnitt[schluessel]
+    if not isinstance(wert, str):
+        raise DatenFehler(
+            f"{datei}: '{schluessel}' {wo} muss ein Text sein, ist "
+            f"{type(wert).__name__} ({wert!r})."
+        )
+    return wert
+
+
+def _datum(roh: dict, ersatz: date, datei: Path) -> date:
+    """Das Datum steht auf dem Arztbericht — es muss ein Datum sein, kein Text."""
+    if "datum" not in roh:
+        return ersatz
+    wert = roh["datum"]
+    if isinstance(wert, datetime) or not isinstance(wert, date):
+        raise DatenFehler(
+            f"{datei}: 'datum' muss ein Datum ohne Uhrzeit sein (JJJJ-MM-TT, "
+            f"ohne Anfuehrungszeichen), ist {type(wert).__name__} ({wert!r})."
+        )
+    return wert
+
+
 def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
     """Liest $FBT_DATEN/tage/JJJJ-MM-TT.toml."""
     basis = daten_pfad() if basis is None else basis
@@ -90,10 +184,21 @@ def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
     except tomllib.TOMLDecodeError as fehler:
         raise DatenFehler(f"{datei} ist kein gueltiges TOML: {fehler}") from fehler
 
+    _fremde_schluessel(roh, ERLAUBT_TAG, "auf oberster Ebene", datei)
+
+    roh_mahlzeiten = roh.get("mahlzeit")
+    if not roh_mahlzeiten:
+        raise DatenFehler(
+            f"{datei}: keine einzige [[mahlzeit]]-Tabelle. Eine Tagesdatei ohne "
+            f"Mahlzeiten wird nicht als 'null Kalorien gegessen' gerechnet — "
+            f"sie ist unvollstaendig. Trage die Mahlzeiten nach dem Muster in "
+            f"referenz/tag.vorlage.toml nach."
+        )
+
     unbekannte: list[str] = []
     angenommen: list[str] = []
     mahlzeiten: list[Mahlzeit] = []
-    for m in roh.get("mahlzeit", []):
+    for m in roh_mahlzeiten:
         # Pruefen ob oberste-Ebene-Schluessel verirrt sind
         verirrt = [s for s in ("beobachtungen", "ziel_kcal", "datum") if s in m]
         for gr in m.get("gericht", []):
@@ -106,34 +211,43 @@ def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
                 f"[[mahlzeit]] stehen. Siehe referenz/tag.vorlage.toml."
             )
 
+        _fremde_schluessel(m, ERLAUBT_MAHLZEIT, "unterhalb einer [[mahlzeit]]", datei)
+        name = _text(m, "name", "in einer [[mahlzeit]]", datei) or ""
+        zeit = _text(m, "zeit", f"bei der Mahlzeit '{name or '?'}'", datei) or ""
+
         gerichte: list[Gericht] = []
         for g in m.get("gericht", []):
-            kcal = g.get("kcal_geplant")
-            anteil = g.get("anteil_gegessen")
+            titel = _text(g, "titel", f"bei einem Gericht ({name or '?'})", datei) or "?"
+            wo = f"bei '{titel}' ({name or '?'})"
+            _fremde_schluessel(g, ERLAUBT_GERICHT, wo, datei)
+            kcal = _zahl(g, "kcal_geplant", wo, datei, min_wert=0)
+            # Der Anteil ist eine Schaetzung der Eltern, aber keine Zahl
+            # ausserhalb von 0 bis 1: 1.5 wuerde Kalorien erfinden, -0.5
+            # wuerde andere Mahlzeiten stillschweigend wegkuerzen.
+            anteil = _zahl(g, "anteil_gegessen", wo, datei,
+                           min_wert=0.0, max_wert=1.0)
             if kcal is None:
-                unbekannte.append(f"{m.get('name', '?')}: {g.get('titel', '?')}")
+                unbekannte.append(f"{name or '?'}: {titel}")
             elif anteil is None:
-                angenommen.append(f"{m.get('name', '?')}: {g.get('titel', '?')}")
+                angenommen.append(f"{name or '?'}: {titel}")
             gerichte.append(
                 Gericht(
-                    titel=g.get("titel", "?"),
-                    quelle=g.get("quelle", "frei"),
+                    titel=titel,
+                    quelle=_text(g, "quelle", wo, datei) or "frei",
                     kcal_geplant=None if kcal is None else float(kcal),
-                    anteil_gegessen=anteil,
+                    anteil_gegessen=None if anteil is None else float(anteil),
                 )
             )
-        mahlzeiten.append(
-            Mahlzeit(zeit=m.get("zeit", ""), name=m.get("name", ""),
-                     gerichte=tuple(gerichte))
-        )
+        mahlzeiten.append(Mahlzeit(zeit=zeit, name=name, gerichte=tuple(gerichte)))
 
     return Tagesbilanz(
-        datum=roh.get("datum", datum),
-        ziel_kcal=roh.get("ziel_kcal"),
+        datum=_datum(roh, datum, datei),
+        ziel_kcal=_zahl(roh, "ziel_kcal", "auf oberster Ebene", datei,
+                        ganz=True, min_wert=1),
         mahlzeiten=tuple(mahlzeiten),
         unbekannte=tuple(unbekannte),
         angenommen=tuple(angenommen),
-        beobachtungen=roh.get("beobachtungen", ""),
+        beobachtungen=_text(roh, "beobachtungen", "auf oberster Ebene", datei) or "",
     )
 
 
@@ -181,7 +295,22 @@ def elternansicht(b: Tagesbilanz) -> str:
 
 
 def tischansicht(b: Tagesbilanz) -> str:
-    """Was es wann gibt. Enthaelt keine Kalorien, kein Gewicht, kein Ziel."""
+    """Was es wann gibt. Enthaelt keine Kalorien, kein Gewicht, kein Ziel.
+
+    Der Titel kommt aus der Tagesdatei und wird am Tisch gelesen. Steht eine
+    Kalorienzahl darin, wird das hier zum Fehler und nicht stillschweigend
+    weggeputzt: die Zahl steht dann auch in der Datei, und dort gehoert sie
+    heraus — sonst taucht sie beim naechsten Ausdruck wieder auf.
+    """
+    for m in b.mahlzeiten:
+        for g in m.gerichte:
+            if KCAL_IM_TITEL.search(g.titel):
+                raise DatenFehler(
+                    f"Der Titel '{g.titel}' ({m.name or '?'}) enthaelt eine "
+                    f"Kalorienangabe. Die Tischansicht wird am Esstisch "
+                    f"gelesen — bitte die Zahl aus dem Titel in der Tagesdatei "
+                    f"entfernen, die Kalorien stehen in 'kcal_geplant'."
+                )
     zeilen = [f"Plan fuer {b.datum.strftime('%d.%m.%Y')}", ""]
     for m in b.mahlzeiten:
         zeilen.append(f"{m.zeit}  {m.name}")
