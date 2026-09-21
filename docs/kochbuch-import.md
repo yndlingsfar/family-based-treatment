@@ -147,7 +147,7 @@ ist echt, die Einheit stimmt nicht.
 3. `risotto-alla-parmigiana`: Portionenzahl (4) ist Kochbuch-Angabe ("als
    Hauptspeise für 4 Personen") und blieb unverändert. Der kcal-Wert
    (134 kcal/Portion) war aber nachweislich zu niedrig, weil der Reis
-   (400g, der größte Kalorienträger) nicht in der Anreicherungstabelle
+   (der größte Kalorienträger des Gerichts) nicht in der Anreicherungstabelle
    steht und komplett fehlte — korrigiert auf 484 kcal/Portion durch eine
    manuelle Reis-Schätzung (ca. 350 kcal/100g roher Reis, außerhalb der
    Anreicherungstabelle).
@@ -172,9 +172,10 @@ ihre Portionenzahl **wörtlich im Kochbuch steht** (keine Schätzung, kein
 
 - **ueberbackener-gemueseauflauf-mit-sojawuerfeln** (1666 kcal, 5
   Portionen): Kochbuch nennt explizit "(5 Personen)". Der Wert liegt nur
-  66 kcal über der 1600er-Grenze; das Gericht ist mit 600g Gouda, 500g
-  Nudeln, 400ml Sahne und 280g Sojawürfeln ausgesprochen kalorienreich —
-  plausibel für eine sehr reichhaltige Familien-Auflaufform. Keine Änderung.
+  66 kcal über der 1600er-Grenze; das Gericht hat einen sehr hohen
+  Käse- und Sahneanteil und enthält zusätzlich Sojawürfel als
+  Fleischersatz — plausibel für eine sehr reichhaltige
+  Familien-Auflaufform. Keine Änderung.
 - **glueckskugeln** (80 kcal, 6 Portionen): Kochbuch nennt explizit "6
   kleine Bällchen". 80 kcal für eine kleine Praline aus Butter, Mandelmehl,
   Puderzucker und Kakao ist plausibel. Keine Änderung.
@@ -297,15 +298,16 @@ niemals eine Grundzutat als Zusatz vorschlagen.
 Abdeckung sichtbar wurden, wurden korrigiert (keine Kochbuch-Zahlen
 geändert, nur die Zutatenliste):
 
-- `wraps-mit-fuellung`: "100g Gemüse + 15ml Öl" war als **eine** Zutat mit
-  115g und `mittel=rapsoel` erfasst — dadurch rechnete die Prüfung
-  fälschlich 115g reines Öl statt 15g Öl + 100g unbewertetes Gemüse.
-  Aufgeteilt in zwei Zutaten.
-- `couscous-mit-gefluegel-und-tomatensalat`: "100g roher Couscous pro
-  Person" war im Kochbuch eine beschreibende Kopfzeile (Mengenverhältnis),
-  wurde aber zusätzlich zur tatsächlichen Zutat "1 große Tasse Couscous"
-  (180g) als eigene Zutat mitgezählt — Couscous wurde doppelt gezählt.
-  Die redundante Zeile entfernt.
+- `wraps-mit-fuellung`: eine Zeile, die im Kochbuch Gemüse und Öl als eine
+  gemeinsame Mengenangabe nennt, war als **eine** Zutat mit dem
+  Gesamtgewicht und `mittel=rapsoel` erfasst — dadurch rechnete die
+  Prüfung das gesamte Gewicht als reines Öl statt Öl plus unbewertetes
+  Gemüse. Aufgeteilt in zwei Zutaten.
+- `couscous-mit-gefluegel-und-tomatensalat`: eine Mengenangabe "pro
+  Person" war im Kochbuch eine beschreibende Kopfzeile
+  (Mengenverhältnis-Hinweis), wurde aber zusätzlich zur tatsächlichen
+  Couscous-Zutat als eigene Zutat mitgezählt — Couscous wurde doppelt
+  gezählt. Die redundante Zeile entfernt.
 
 **Zuordenbare Zutaten (Coverage) vorher/nachher:**
 
@@ -313,6 +315,16 @@ geändert, nur die Zutatenliste):
 vorher (Ende Fix-Runde 1):  272/626 (43 %)
 nachher (Fix-Runde 2):      546/626 (87 %)
 ```
+
+**Wichtige Einschränkung dieser Zahl** (nachträglich in Fix-Runde 5
+korrigiert, siehe eigener Abschnitt unten): Dieser 87-%-Wert zählt jede
+Zutat mit gesetztem `mittel`-Schlüssel, auch wenn ihre `einheit`
+`"stueck"` ist (z. B. Eier, Eigelb) — solche Zutaten tragen zwar einen
+Schlüssel zur Abdeckungs-Transparenz, gehen aber wegen der fehlenden
+Gramm-/Milliliter-Angabe **nie** in eine tatsächliche Kalorien-Summe ein
+(`Mittel.kcal()` unterstützt nur `"g"` und `"ml"`). Die tatsächlich
+*berechenbare* Abdeckung ist niedriger — siehe Fix-Runde 5 für die
+korrigierte Zahl.
 
 **Kochbuch-Einzelfiguren rekonstruiert statt neu geraten:** Für 13 der 15
 Rezepte ohne jede Kochbuch-kcal-Angabe (aus der ersten Übertragung) ist die
@@ -437,8 +449,8 @@ Zeitpunkt im Arbeitsverzeichnis des Repositories.
   1 Prise = 1 g. Diese Werte sind in `was` jeweils mit dem Originalwortlaut
   dokumentiert.
 - **Fehlende Portionenzahl bei großen Mengen ohne Personenangabe** (z. B.
-  Süßkartoffel-Karottensuppe mit 1,5 kg Karotten, Kartoffel-Lauchsuppe mit
-  2 kg Kartoffeln). **Korrigiert in Fix-Runde 1** (siehe eigener Abschnitt
+  zwei Suppenrezepte mit sehr großen Gemüsemengen). **Korrigiert in
+  Fix-Runde 1** (siehe eigener Abschnitt
   oben): Die ursprüngliche Regel (`portionen: 1`, gesamte Menge als
   `kcal_pro_portion`) erzeugte unrealistische "Ein-Topf-als-eine-Portion"-
   Werte bis zu 7056 kcal. Portionenzahl wird jetzt aus der Zutatenmasse und
@@ -480,26 +492,26 @@ hoch, nie zu niedrig.
 **Fund per Skript** (Koordinator-Skript, exakt 18 Treffer in 17
 Rezepten):
 
-| Rezept | Zutat | Menge | vorher (g gerechnet) | nachher (ml, Dichte) |
-|---|---|---:|---:|---:|
-| couscous-mit-gefluegel-und-tomatensalat | Olivenöl (5-10 EL, ca. 105ml) | 105 | 928 kcal | 845 kcal |
-| notfallbruehe | Beikostöl (5 EL) | 70 | 619 kcal | 569 kcal |
-| kuerbiscremesuppe | Kokosfett/Speiseöl (4 EL) | 56 | 495 kcal | 455 kcal |
-| quark-oelteig-broetchen | Rapsöl (4 EL) | 56 | 495 kcal | 455 kcal |
-| couscous-salat-mit-joghurt | Leinöl (4 EL, Hauptrezept) | 56 | 495 kcal | 460 kcal |
-| couscous-salat-mit-joghurt | Leinöl (2 EL, falscher Joghurt) | 28 | 248 kcal | 230 kcal |
-| kaesepolenta-mit-joghurt | Leinöl (2 EL, falscher Joghurt) | 28 | 248 kcal | 230 kcal |
-| gehaltvolle-klare-suppe | Beikostöl (2-3 EL) | 38 | 336 kcal | 309 kcal |
-| ruehrei | Beikostöl (2-3 EL) | 38 | 336 kcal | 309 kcal |
-| cremiges-parmesan-huehnchen | Olivenöl (2 EL) | 28 | 248 kcal | 226 kcal |
-| bananen-brownie | Beikostöl (2 EL) | 28 | 248 kcal | 228 kcal |
-| gemuesekuchen | Sonnenblumen-/Rapsöl (2 EL) | 28 | 248 kcal | 228 kcal |
-| lasagne | Öl (2 EL) | 28 | 248 kcal | 228 kcal |
-| ramen-suppe | Öl (2 EL) | 28 | 248 kcal | 228 kcal |
-| schneller-knoedelauflauf | Öl (2 EL) | 28 | 248 kcal | 228 kcal |
-| risotto-alla-parmigiana | Olivenöl (1 EL) | 14 | 124 kcal | 113 kcal |
-| orangen-moehren-shake | Leinöl (1 TL) | 5 | 44 kcal | 41 kcal |
-| smoothie-bowl | Ahornsirup/Agavendicksaft/Honig (1 EL) | 15 | 39 kcal | 52 kcal |
+| Rezept | Zutatentyp | vorher (g gerechnet) | nachher (ml, Dichte) |
+|---|---|---:|---:|
+| couscous-mit-gefluegel-und-tomatensalat | Olivenöl | 928 kcal | 845 kcal |
+| notfallbruehe | Beikostöl | 619 kcal | 569 kcal |
+| kuerbiscremesuppe | Kokosfett/Speiseöl | 495 kcal | 455 kcal |
+| quark-oelteig-broetchen | Rapsöl | 495 kcal | 455 kcal |
+| couscous-salat-mit-joghurt | Leinöl (Hauptrezept) | 495 kcal | 460 kcal |
+| couscous-salat-mit-joghurt | Leinöl (falscher Joghurt) | 248 kcal | 230 kcal |
+| kaesepolenta-mit-joghurt | Leinöl (falscher Joghurt) | 248 kcal | 230 kcal |
+| gehaltvolle-klare-suppe | Beikostöl | 336 kcal | 309 kcal |
+| ruehrei | Beikostöl | 336 kcal | 309 kcal |
+| cremiges-parmesan-huehnchen | Olivenöl | 248 kcal | 226 kcal |
+| bananen-brownie | Beikostöl | 248 kcal | 228 kcal |
+| gemuesekuchen | Sonnenblumen-/Rapsöl | 248 kcal | 228 kcal |
+| lasagne | Öl | 248 kcal | 228 kcal |
+| ramen-suppe | Öl | 248 kcal | 228 kcal |
+| schneller-knoedelauflauf | Öl | 248 kcal | 228 kcal |
+| risotto-alla-parmigiana | Olivenöl | 124 kcal | 113 kcal |
+| orangen-moehren-shake | Leinöl | 44 kcal | 41 kcal |
+| smoothie-bowl | Ahornsirup/Agavendicksaft/Honig | 39 kcal | 52 kcal |
 
 Alle 18 auf `einheit: "ml"` umgestellt, `menge` unverändert (die Zahl war
 schon die Millilitermenge). 17 der 18 Einträge sind Öle (Dichte
@@ -576,27 +588,26 @@ exakt).
 
 ### Befund
 
-`risotto-alla-parmigiana` hatte "Brühe (1,5L Wasser + 2 Brühwürfel)" als
-**eine** Zutat mit 1500g und `mittel: bruehpulver` erfasst — dadurch
-rechnete die Prüfung 1,5 Liter Wasser als 1,5 Kilogramm Bouillonpulver
-(3000 kcal statt realistischer ~40 kcal für zwei Würfel). Dieselbe Form
-des Fehlers fand sich in `rigatoni-al-forno-auflauf` ("Wasser + 2 EL
-Gemüsebrühpulver (200ml)", ebenfalls komplett als `bruehpulver` geführt,
-400 kcal statt ~40 kcal).
+`risotto-alla-parmigiana` hatte seine Brühe (im Kochbuch als Wasser plus
+Brühwürfel beschrieben) als **eine** Zutat mit dem vollen Flüssigkeitsgewicht
+und `mittel: bruehpulver` erfasst — dadurch rechnete die Prüfung die
+gesamte Wassermenge als Bouillonpulver (3000 kcal statt realistischer
+~40 kcal für die Würfel allein). Dieselbe Form des Fehlers fand sich in
+`rigatoni-al-forno-auflauf` (Wasser plus Gemüsebrühpulver, ebenfalls
+komplett als `bruehpulver` geführt, 400 kcal statt ~40 kcal).
 
 ### Korrektur
 
 Beide Einträge in Wasser (kein `mittel`, kalorisch irrelevant) und die
-tatsächlichen Brühwürfel/das Pulver (~20g, `mittel: bruehpulver`)
-aufgeteilt — das entspricht wörtlich dem, was das Kochbuch beschreibt
-("1,5l Wasser **und** 2 Brühwürfel", zwei separate Mengen, keine
-vorgefertigte Fertigbrühe).
+tatsächlichen Brühwürfel/das Pulver (`mittel: bruehpulver`) aufgeteilt —
+das entspricht wörtlich dem, was das Kochbuch beschreibt (Wasser **und**
+Brühwürfel als zwei separate Mengen, keine vorgefertigte Fertigbrühe).
 
 - **risotto-alla-parmigiana**: keine Kochbuch-kcal-Angabe — `kcal_pro_portion`
   aus der jetzt korrigierten Zutatensumme neu berechnet: **1274 → 534
   kcal/Portion**. Damit endet die Zahl auf einem Wert, der zum Reis als
-  Hauptkalorienträger passt (400g Reis = 1400 kcal, 65 % des Rezepts),
-  statt von einer falsch gezählten Brühe verzerrt zu sein.
+  Hauptkalorienträger passt (65 % des Rezepts), statt von einer falsch
+  gezählten Brühe verzerrt zu sein.
 - **rigatoni-al-forno-auflauf**: `kcal_pro_portion` kommt aus der
   Kochbuch-Fußnote ("6 Portionen, pro Portion 875 kcal") und wurde **nicht
   verändert** — nach der Korrektur bestand das Rezept die
@@ -666,15 +677,15 @@ geprüft):
 | risotto-alla-parmigiana | Reis | 65 % | legitim (nach der Korrektur oben) |
 | ruehrei | Beikostöl | 78 % | legitim — Eier zaehlen als "stueck" nicht mit |
 | shake-mit-fruchtquatsch | Sahne | 56 % | legitim |
-| tomatensuppe | Rapsöl (300ml) | 52 % | legitim — Kochbuch nennt 300ml wörtlich |
+| tomatensuppe | Rapsöl | 52 % | legitim — Kochbuch nennt diese Ölmenge wörtlich als erste Zutat |
 | vollkornbroetchen-ueber-nacht | Mehl | 54 % | legitim |
 
 **Eine Korrektur vor dieser Tabelle**, nicht im Treffer selbst sichtbar,
-weil sie den Treffer beseitigt hat: `frucht-smoothie` hatte "Obst mit
-Banane, z. B. Honigmelone/Mango + Orangensaft oder Erdbeeren/Blaubeeren +
-Traubensaft" komplett auf `mittel: banane` zugeordnet, obwohl das
-Kochbuch ausdrücklich einen Obstmix beschreibt, bei dem Banane nur *ein*
-Bestandteil ist (Melone/Mango/Beeren sind kalorienärmer). Auf
+weil sie den Treffer beseitigt hat: `frucht-smoothie` hatte eine
+Zutatenzeile, die im Kochbuch einen Obstmix mit Banane als nur *einem*
+Bestandteil neben mehreren Alternativfrüchten beschreibt, komplett auf
+`mittel: banane` zugeordnet, obwohl die Alternativfrüchte kalorienärmer
+sind. Auf
 `obst-allgemein` (Richtwert 50 kcal/100g) umgestellt; `kcal_pro_portion`
 blieb unverändert (Kochbuch-Spanne 300–450 kcal, Mittelwert 375),
 nur die `pruefnotiz` aktualisiert.
@@ -694,3 +705,230 @@ zwei Zutaten aufgeteilt), zuordenbare Zutaten blieben bei 546 (die neuen
 Wasser-Einträge tragen bewusst kein `mittel`). Notizzahl sank von 41 auf
 40 (`rigatoni-al-forno-auflauf` bestand die Prüfung nach der Korrektur
 exakt). Band-Check unverändert bei den zwei bereits erklärten Ausnahmen.
+
+## Fix-Runde 5 (letzte Runde): eine übersehene Kochbuchangabe, eine zweite ml-Sweep-Welle, und eine Seiten-Fußnoten-Abrechnung
+
+Eine unabhängige Prüfung gegen den gedruckten Kochbuchtext fand einen
+kritischen Fehler plus mehrere kleinere. Sie bestätigte gleichzeitig,
+dass mehrere nicht offensichtliche (nicht der reinen Extraktionsreihenfolge
+folgende) Fußnotenzuordnungen aus früheren Runden korrekt waren.
+
+### Kritisch: eine gedruckte Kochbuchangabe wurde übersehen
+
+`bananen-brownie` war als "keine kcal-Angabe im Kochbuch" behandelt und
+über zwei Runden hinweg aus der Zutatensumme geschätzt (715, dann 1174
+kcal/Portion bei 1 Portion). Tatsächlich steht die Angabe im Kochbuch —
+sie war nur, wie viele andere in diesem Dokument, durch die PDF-Extraktion
+ans Ende der Datei verschoben und musste durch Ausschluss der anderen
+beiden Rezepte auf derselben Seite zugeordnet werden.
+
+| | vorher | nachher |
+|---|---|---|
+| Portionen | 1 (geschätzt) | 4 (Kochbuchangabe) |
+| kcal/Portion | 1174 (aus Zutatensumme geschätzt) | 343 (Kochbuchangabe) |
+| `portionen_geschaetzt` | `true` | `false` |
+
+Die vorherige Zutatensummen-Schätzung für die ganze Backform (rund 1174
+kcal) lag in ähnlicher Größenordnung wie die jetzt gefundene gedruckte
+Gesamtangabe — die Summe war ungefähr richtig, nur die Portionenzahl war
+falsch (1 statt 4). Das ist genau der Fehlertyp, den Fix-Runde 1 beheben
+sollte: Er überlebte, weil 1174 kcal zufällig innerhalb des
+100–1600-kcal-Bandes lag und daher keinen Bandtreffer erzeugte.
+
+### Wichtig 1: `wraps-mit-fuellung` verlor stillschweigend seine größte Zutat
+
+Das Fladenbrot war mit `einheit: "stueck"` erfasst, obwohl es einen
+`mittel`-Schlüssel trägt. `plausibilitaet()` überspringt jede
+`"stueck"`-Zutat — dadurch trug das Fladenbrot nichts zur Summe bei, aus
+der `kcal_pro_portion` aber gerade abgeleitet worden war. Auf Gramm
+umgestellt (die im Kochbuch genannte Stückgröße als Gewicht übernommen).
+`kcal_pro_portion`: **1128 → 1117** (nach dem ml-Sweep unten nochmal
+geringfügig nachjustiert).
+
+Sweep über alle 79 Rezepte nach demselben Muster (ein `"stueck"`-Eintrag
+mit `mittel`, dessen Zahl aus der Zutatensumme rekonstruiert wurde): keine
+weiteren Treffer. Alle anderen `"stueck"`-Einträge mit `mittel` (vor allem
+Eier/Eigelb in mehreren Rezepten) stehen in Rezepten, deren
+`kcal_pro_portion` aus einer Kochbuchangabe stammt — dort unverändert
+gelassen.
+
+### Wichtig 2: die ml-als-g-Inkonsistenz war nicht geschlossen
+
+Der Fix-Runde-3-Fund traf nur Einträge, deren Text ein isoliertes
+`ml`/`EL`/`TL` mit Wortgrenze enthielt — eine Zahl direkt vor "ml" ohne
+Leerzeichen (z. B. eine dreistellige Millilitermenge direkt gefolgt von
+"ml") hat keine Wortgrenze vor dem "m" und wurde von der
+Fix-Runde-3-Regex nicht gefunden. Von Hand jeden verbleibenden Eintrag mit
+einer Dichte ungleich `null`/`1.0` durchgesehen: **38 weitere Einträge**
+in mehreren Rezepten, zwei Gruppen:
+
+- **31 echte Fehler**: der Text nennt eine Millilitermenge, aber die
+  Zahl war unverändert mit `einheit: "g"` übernommen worden (dieselbe
+  Fehlerrichtung wie in Fix-Runde 3 — immer eine Überschätzung, da alle
+  betroffenen Zutaten Öle oder andere Flüssigkeiten mit Dichte < 1 sind,
+  bis auf zwei leichte Milchprodukt-Fälle mit Dichte > 1, die dieselbe
+  Umstellung brauchten).
+- **7 nur Konvention**: die Zahl war beim Transkribieren bereits von Hand
+  mit der Dichte umgerechnet worden (rechnerisch schon richtig), stand
+  aber unter `einheit: "g"` — umgestellt auf `einheit: "ml"` mit der
+  ursprünglichen Millilitermenge, damit die Datei durchgängig eine
+  Konvention verwendet.
+
+Betroffen (teils bereits in Fix-Runde 3 mit einem anderen Eintrag
+gelistet, hier zusätzlich): bananen-shake, blitz-lasagne,
+gebackener-blumenkohl-mit-limetten-aioli, gnocchi-auflauf,
+hackfleisch-risotto, kartoffel-lauchsuppe, kartoffelsuppe, kastaniensuppe,
+kuerbis-feta-honig-auflauf, kuerbissuppe-mit-kokosmilch, lasagne,
+melli-shake, nuss-shake, obst-smoothie-babyglaeschen,
+orangen-moehren-shake, orecchiette-nudeln-mit-kapern, oreo-shake,
+orrechiette-pasta, pizzasuppe, power-porridge-schnelle-variante,
+power-smoothie-mit-beeren, powermilch, powershake, powersmoothie-fruechte,
+rigatoni-al-forno-auflauf, schwarzwurzelsuppe-mit-pumpernickel,
+shake-mit-fruchtquatsch, suesskartoffel-karottensuppe, tomatensuppe,
+tomatensuppe-mit-avocado, tortellini-salat, vollkornbroetchen-ueber-nacht,
+waffeln, wraps-mit-fuellung.
+
+**`kcal_pro_portion` neu berechnet** (Wert stammte aus der Zutatensumme,
+nicht aus dem Kochbuch): hackfleisch-risotto, kartoffel-lauchsuppe,
+kuerbis-feta-honig-auflauf, pizzasuppe, schwarzwurzelsuppe-mit-pumpernickel,
+wraps-mit-fuellung. Alle sechs Änderungen liegen im niedrigen bis
+mittleren einstelligen Prozentbereich (die Ölmenge ist typischerweise ein
+kleinerer Teil des jeweiligen Rezepts).
+
+**Unverändert gelassen** (Wert stammt aus einer echten Kochbuchangabe —
+Fußnote, Spanne, Dichte oder Summe der Kochbuch-Einzelangaben), nur die
+Einheit korrigiert und, falls nötig, die `pruefnotiz` mit frischen
+Abweichungszahlen versehen: alle übrigen der 33 oben genannten Rezepte.
+Vier davon (kuerbissuppe-mit-kokosmilch, orecchiette-nudeln-mit-kapern,
+orrechiette-pasta, waffeln) bestanden die Plausibilitätsprüfung danach
+exakt — `pruefen` dort zurückgesetzt.
+
+### Fehler 4: fünf `pruefnotiz`-Texte behaupteten eine Prüfung, die nicht lief
+
+Die Fix-Runde-3-Notizen für bananen-brownie (inzwischen ohnehin durch die
+Kochbuchangabe ersetzt), couscous-salat-mit-joghurt,
+cremiges-parmesan-huehnchen, kuerbiscremesuppe und smoothie-bowl
+behaupteten, die Summe der zugeordneten Zutaten entspreche jetzt exakt
+dem gespeicherten Wert. Tatsächlich lag eine Rundungsdifferenz von
+0,9–1,7 % vor (Doppelrundung: einmal beim Ablesen der
+`plausibilitaet()`-Notiz als Text, einmal bei der Portionsteilung). Für
+die verbliebenen vier direkt aus der ungerundeten Zutatensumme neu
+berechnet, sodass der Satz jetzt stimmt:
+
+| Rezept | vorher | nachher |
+|---|---:|---:|
+| couscous-salat-mit-joghurt | 1026 | 1008 |
+| cremiges-parmesan-huehnchen | 613 | 607 |
+| kuerbiscremesuppe | 656 | 650 |
+| smoothie-bowl | 858 | 870 |
+
+### Auch behoben
+
+- **Rezeptinhalt im committeten Protokoll.** Mehrere Passagen in diesem
+  Dokument zitierten konkrete Zutatenmengen aus dem Kochbuch (Zutatenname
+  plus Gramm-/Milliliter-Zahl, an mehreren Stellen, u. a. in der
+  Fix-Runde-3-Tabelle). Der Auftrag verlangt, dass dieses Dokument keinen
+  Rezeptinhalt trägt, und das Kochbuch-Vorwort untersagt die Weitergabe
+  an Dritte. Alle gefundenen Stellen umformuliert, um den Befund ohne die
+  genauen Mengen wiederzugeben (z. B. "ein Auflauf mit hohem Käse- und
+  Sahneanteil" statt der konkreten Grammzahlen).
+- **Coverage-Zahl korrigiert.** Die "87 %"-Schlagzeile zählte 14 Zutaten,
+  die einen `mittel`-Schlüssel tragen, aber `einheit: "stueck"` sind und
+  daher nie in eine Summe eingehen (`Mittel.kcal()` unterstützt nur `"g"`
+  und `"ml"`). Die tatsächlich berechenbare Abdeckung: **532/628 (85 %)**
+  (`z['einheit'] in ('g', 'ml')` zusätzlich zur `mittel`-Zuordnung
+  gefordert). Ab jetzt ist dies die zu zitierende Zahl.
+- **Irreführende Fehlermeldung.** `plausibilitaet()` meldete bei
+  vollständig unzugeordneten Rezepten "keine Zutat liess sich der
+  Anreicherungstabelle zuordnen" — seit Fix-Runde 2 werden aber zwei
+  Tabellen konsultiert. Umformuliert zu "keine Zutat liess sich einer der
+  beiden Tabellen (Anreicherung, Grundzutaten) zuordnen."
+
+### Standing-Quality-Gate: Seiten-Fußnoten-Abrechnung
+
+Genau dieser Gate-Typ hätte den Brownie-Fehler gefangen: für jede
+Kochbuchseite wird gezählt, wie viele gedruckte kcal-Fußnoten es gibt und
+wie viele Rezepte auf dieser Seite stehen, und geprüft, ob jede Fußnote
+genau einem Rezept zugeordnet ist. Anders als die anderen Gates lässt
+sich dieser nicht allein aus `kochbuch.json` ableiten — er vergleicht
+gegen den Wortlaut des Kochbuchs selbst und ist daher eine **manuelle
+Abgleich-Prozedur**, die bei jeder künftigen Kochbuch-Übertragung erneut
+durchlaufen werden muss:
+
+1. Für jede Kochbuchseite: die Anzahl der auf dieser Seite beginnenden
+   Rezepte zählen (laut Inhaltsverzeichnis plus etwaiger im Fließtext
+   gefundener, nicht im Verzeichnis stehender Rezepte).
+2. Die Anzahl der gedruckten kcal-Fußnoten zählen, die dieser Seite
+   zuzuordnen sind (inline unter dem Rezepttitel oder — bei dieser
+   PDF-Extraktion durchgängig — an den Anfang der jeweils folgenden
+   Seite verschoben).
+3. Jede Fußnote genau einem Rezept auf der Seite zuordnen (per
+   Ausschluss, per Arithmetik-Abgleich gegen im Rezept selbst genannte
+   Einzelangaben, oder per inhaltlichem Bezug).
+4. Jedes Rezept ohne zugeordnete Fußnote braucht eine explizite
+   Begründung (`"pruefen": true` mit einer `pruefnotiz`, die "keine
+   kcal-Angabe im Kochbuch" o. ä. sagt) — **nicht** einfach als "hat
+   wohl keine" übergehen.
+5. Jede Fußnote ohne zugeordnetes Rezept ist ein Leftover und bedeutet:
+   ein Rezept wurde übersehen oder falsch zugeordnet.
+
+**Ergebnis dieses Durchlaufs, über das gesamte Kochbuch (Seiten 9–39):**
+Nach der Korrektur des Brownies (oben) sind **keine weiteren Leftovers**
+gefunden worden — jede Seite hat entweder genauso viele Fußnoten wie
+zuordenbare Rezepte, oder weniger Fußnoten als Rezepte, wobei jedes
+unfußnotierte Rezept bereits korrekt mit `"pruefen": true` und einer
+"keine kcal-Angabe im Kochbuch"-Notiz geführt wird.
+
+Drei Seiten bleiben bewusst unangetastet, wie angewiesen:
+
+- **Seite 18** (2 Rezepte, 1 Fußnote): Die Fußnote ist einem der beiden
+  Rezepte zugeordnet, das andere korrekt als "keine kcal-Angabe" geführt.
+  Welches der beiden Rezepte die Fußnote tatsächlich meint, bleibt ohne
+  weitere Quelle nicht abschließend beweisbar.
+- **Seite 29** (2 Rezepte, 1 Fußnote): Dieselbe Situation.
+- Keine neue Erkenntnis zu diesen beiden Seiten aus diesem Durchlauf,
+  die über den bereits bekannten Stand hinausginge — daher nicht
+  angefasst, wie angewiesen.
+
+### Ergebnis des finalen Abnahmegates
+
+```
+Rezepte gesamt: 79
+Zutaten gesamt: 628
+zuordenbar (inkl. stueck): 546/628 (87%)
+echt berechenbar: 532/628 (85%)
+Strukturfehler: 0
+Notizen: 40, davon nicht pruefbar: 0
+unkommentiert: 0
+portionen_geschaetzt: 53
+zeit_min_geschaetzt: 79
+```
+
+`portionen_geschaetzt` sank von 54 auf 53 (bananen-brownie trägt jetzt
+eine echte Kochbuchangabe, kein Schätzwert mehr).
+
+Band-Check (unverändert):
+
+```
+ausserhalb 100-1600 kcal/Portion: 2
+  ueberbackener-gemueseauflauf-mit-sojawuerfeln    1666 kcal x5
+  glueckskugeln                                 80 kcal x6
+```
+
+>50-%-Sweep: unverändert 23 Treffer, alle bereits in Fix-Runde 4 einzeln
+als legitim geprüft; keine neuen Treffer durch diese Runde.
+
+Testlauf:
+
+```
+$ python3 -m unittest discover -s tests -t . 2>&1 | tail -5
+...
+----------------------------------------------------------------------
+Ran 47 tests in 0.009s
+
+OK
+```
+
+47/47 grün, unverändert — auch diese Runde brauchte nur eine
+Wort-Änderung im Code (die Fehlermeldung), keine strukturelle
+Code-Änderung.

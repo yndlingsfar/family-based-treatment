@@ -130,7 +130,7 @@ def plausibilitaet(roh: dict, mittel: dict, grund: dict | None = None) -> str | 
         zugeordnet += 1
 
     if zugeordnet == 0:
-        return "nicht pruefbar: keine Zutat liess sich der Anreicherungstabelle zuordnen."
+        return "nicht pruefbar: keine Zutat liess sich einer der beiden Tabellen (Anreicherung, Grundzutaten) zuordnen."
 
     behauptet = roh["kcal_pro_portion"] * roh["portionen"]
     if summe == 0:
