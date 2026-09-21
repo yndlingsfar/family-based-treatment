@@ -224,8 +224,17 @@ class ProfilTest(unittest.TestCase):
         self.assertIn(str(leer / "profil.toml"), str(fall.exception))
 
     def test_meldet_fehlende_pflichtangabe(self):
+        # Die uebrigen Abschnitte sind absichtlich vollstaendig: sonst schlaegt
+        # die Pruefung auf [mahlzeiten] zuerst an und das Fehlen von
+        # geburtsdatum kaeme nie zur Sprache.
         with self.assertRaises(DatenFehler) as fall:
-            lade_profil(schreibe('[kind]\nrufname = "Testkind"\n'))
+            lade_profil(
+                schreibe(
+                    '[kind]\nrufname = "Testkind"\n\n[ziele]\n'
+                    'zunahme_g_pro_woche = 500\n\n[mahlzeiten]\n'
+                    'plan = ["fruehstueck"]\n'
+                )
+            )
         self.assertIn("geburtsdatum", str(fall.exception))
 
     def test_lehnt_wahrheitswert_als_zahl_ab(self):
@@ -403,7 +412,7 @@ def _profil_aus_toml(roh: dict, datei: Path) -> Profil:
 python3 -m unittest tests.test_daten -v
 ```
 
-Erwartet: PASS, 11 Tests.
+Erwartet: PASS, 10 Tests.
 
 - [ ] **Step 5: Profilvorlage anlegen**
 
@@ -1203,11 +1212,20 @@ class AnreichernTest(unittest.TestCase):
         self.assertTrue(self.mittel[e.vorschlaege[0].mittel_id].neutral)
 
     def test_schiesst_nicht_ueber_das_ziel_hinaus(self):
+        # erreicht_kcal ist die Summe fuer ALLE Portionen, das Ziel gilt pro
+        # Portion. Der Vergleich muss mit portionen multipliziert werden.
+        portionen = OHNE_ERSETZBARES["portionen"]
         e = anreichern(OHNE_ERSETZBARES, 600, self.mittel)
-        self.assertLessEqual(e.erreicht_kcal, 600 * 1.05)
+        self.assertLessEqual(e.erreicht_kcal, 600 * portionen * 1.05)
+
+    def test_nutzt_maltodextrin_als_letztes_mittel_ausserhalb_der_refeeding_phase(self):
+        e = anreichern(OHNE_ERSETZBARES, 2000, self.mittel)
+        self.assertIn("maltodextrin", [v.mittel_id for v in e.vorschlaege])
 
     def test_meidet_maltodextrin_in_der_refeeding_phase(self):
-        e = anreichern(OHNE_ERSETZBARES, 900, self.mittel, refeeding_phase=True)
+        # Gleiches Ziel wie im Test darueber, nur mit refeeding_phase=True:
+        # nur so zeigt sich, dass die Sperre wirkt und nicht bloss nie greift.
+        e = anreichern(OHNE_ERSETZBARES, 2000, self.mittel, refeeding_phase=True)
         self.assertNotIn("maltodextrin", [v.mittel_id for v in e.vorschlaege])
         self.assertTrue(any("Maltodextrin" in w for w in e.warnungen))
 
@@ -1259,11 +1277,14 @@ ERSATZ = {
 }
 
 # Reihenfolge, in der zugegeben wird: neutrales Fett zuerst, dann fettreiche
-# Milchprodukte, dann Nussmus. Kohlenhydrate stehen bewusst am Ende.
-ZUGABE_REIHENFOLGE = ("rapsoel", "cashewmus", "mascarpone", "creme-double", "mandelmus")
+# Milchprodukte, dann Nussmus. Maltodextrin steht als reines Kohlenhydrat ganz
+# am Ende (Refeeding-Syndrom-Prophylaxe) und faellt bei refeeding_phase=True
+# ueber seine Warnung aus der Auswahl.
+ZUGABE_REIHENFOLGE = ("rapsoel", "cashewmus", "mascarpone", "creme-double",
+                      "mandelmus", "maltodextrin")
 
 MAX_ZUGABE_G = {"rapsoel": 40, "cashewmus": 40, "mascarpone": 100,
-                "creme-double": 100, "mandelmus": 50}
+                "creme-double": 100, "mandelmus": 50, "maltodextrin": 40}
 
 
 @dataclass(frozen=True)
