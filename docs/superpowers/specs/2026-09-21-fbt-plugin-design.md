@@ -158,17 +158,56 @@ der bestehenden Fälle.
 
 - **Bezugsgröße bleibt erhalten.** `basisUnit` wird durchgereicht, nicht auf
   „Portion" normalisiert. Andernfalls droht ein Rechenfehler um ein Vielfaches
-  in einer Bilanz, die zur Ärztin geht.
+  in einer Bilanz, die zur Ärztin geht. Die Stichprobe über 12 Rezepte zeigt,
+  wie nötig das ist: vorgefunden wurden `Portion`, `Stück`, `ración`, `portion`,
+  `porce`, `porci` und `dose`. Ein Mapper, der „pro Portion" annimmt, liegt
+  allein bei `Stück` schon falsch.
+
+- **Mehrere Bezugsgrößen: die beschriftete gewinnt.** Manche Rezepte liefern
+  mehrere `recipeNutritions`-Einträge. `r12345` etwa hat
+  `{quantity: 1, unitNotation: "dose", 548 kcal}` **und**
+  `{quantity: 16, unitNotation: null, 8768 kcal}` — pro Portion und fürs ganze
+  Rezept, Faktor 16. Der Mapper wählt explizit den Eintrag mit nicht-leerer
+  Bezeichnung, nie nach Array-Position. Ein `basisUnit: ""` wird nie
+  ausgegeben: eine unbeschriftete Bezugsgröße heißt „wir kennen die
+  Bezugsgröße nicht" und gehört damit in denselben Topf wie fehlende Werte,
+  also nach `null`.
+
+- **Zahlen werden geprüft, nicht gecastet.** `Number()` ist hier verboten:
+  `Number('') === 0` und `Number.isNaN(0) === false`, ein leerer Upstream-Wert
+  würde also als selbstbewusste **0 kcal** durchgereicht — genau das
+  „fehlend ≠ null", das diese Leitplanke verhindern soll, nur durch die
+  Wertefilter-Tür statt durch die Null-Tür. Geprüft wird mit
+  `typeof x === 'number' && Number.isFinite(x)`. Eine vorhandene, aber
+  nicht-numerische `quantity` macht den Eintrag unbrauchbar, statt still auf 1
+  zu defaulten — ein Default würde „pro eine Einheit" behaupten, ohne Beleg.
 - **Cookidoos Typnamen bleiben roh.** Kein Umbenennen von `carb2` oder `kJ`.
 - **`nutrition` ist nullable.** Nicht jedes Rezept hat Nährwerte; fehlend ist
   nicht dasselbe wie null Kalorien, und das Plugin muss den Unterschied sehen.
-- **`<NOBR>`/`<nobr>`-Tags** werden aus den Schritttexten entfernt, der übrige
-  Text bleibt unverändert (Thermomix-Angaben wie „14 Min./Varoma/Stufe 1" sind
-  gewollt).
+- **Schritttexte werden zu reinem Text.** Alle HTML-Tags werden entfernt und die
+  gängigen Entities dekodiert. Thermomix-Angaben wie „14 Min./Varoma/Stufe 1"
+  sind Inhalt und bleiben erhalten; Hervorhebungen gehen bewusst verloren, weil
+  dieser Text am Küchentisch vorgelesen und auf den Spickzettel gedruckt wird.
+
+  *Korrektur vom 21.09.2026:* Hier stand ursprünglich, `<NOBR>` sei das einzige
+  Markup und „der übrige Text bleibt unverändert". Das war empirisch falsch. Eine
+  Stichprobe über 12 Live-Rezepte ergab `nobr` ×58, `strong` ×46, `&nbsp;` ×20,
+  dazu `<p>`, `<i>`, `&deg;`, `&ccedil;`, `&eacute;`, `&quot;`. Ein Rezept lieferte
+  `"Pr&eacute;-aque&ccedil;a o forno a 180&deg;C."`. Auch das Abnahmerezept
+  `r16687` enthält in Schritt 5 ein `<strong>`.
 - **Suchendpunkt bleibt unangetastet** — liefert keine Nährwerte, Scope bleibt
   eng.
 
-### 4.4 Abnahme
+### 4.4 Offen gelassen: mehrere Bezugsgrößen gleichzeitig
+
+`CookidooNutrition` hält genau eine Bezugsgröße. Für `r12345` heißt das, dass die
+Angabe fürs ganze Rezept verworfen wird — richtig für unseren Zweck, aber der
+Typ kann nicht abbilden, was die API dort tatsächlich liefert. Falls ein
+späterer Verbraucher beide braucht, wäre `bases: CookidooNutrition[]` die
+Erweiterung. Bewusst nicht in dieser Ausbaustufe: die Auswahlregel oben macht
+die einfache Form sicher, und wir brauchen genau eine Zahl pro Mahlzeit.
+
+### 4.5 Abnahme
 
 `get_recipe_details` für `r16687` gibt 229 kcal pro Portion und die
 Zubereitungsschritte zurück. Bestehende Tests bleiben grün.

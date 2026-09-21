@@ -330,6 +330,12 @@ git commit -m "feat(recipe): map nutrition figures with their reported basis"
 
 Die Gruppentitel sind häufig leer. `<NOBR>` kommt in beiden Schreibweisen vor.
 
+> **Korrektur vom 21.09.2026 (siehe Nachtrag am Ende).** Die Annahme, `<NOBR>`
+> sei das einzige Markup, war falsch. Eine Stichprobe über 12 Live-Rezepte fand
+> zusätzlich `strong` ×46, `&nbsp;` ×20, `<p>`, `<i>` und diverse Entities —
+> auch im Abnahmerezept `r16687` selbst. Der Nachtrag entfernt alle Tags und
+> dekodiert die Entities.
+
 - [ ] **Step 1: Typ ergänzen**
 
 In `cookidoo-recipe.type.ts` **nach** `CookidooNutrition` einfügen:
@@ -590,7 +596,7 @@ cd /Users/danielsteiner/Projects/cookidoo-mcp
 pnpm verify:recipe
 ```
 
-Erwartet, wörtlich:
+Erwartet:
 
 ```
 recipe:     Kartoffelsuppe (r16687)
@@ -599,6 +605,14 @@ nutrition:  229 kcal per 1 Portion
 steps:      6
 first step: Wasser und Salz in den Mixtopf geben, …
 ```
+
+> **Korrektur vom 21.09.2026 (siehe Nachtrag am Ende).** Die `first step:`-Zeile
+> oben konnte das Skript nie erzeugen — es schnitt bei 80 Zeichen mitten im Wort
+> ab (`…Möhren, Staudenselle…`). Der Implementer stand damit vor der Wahl,
+> einen Mismatch zu melden oder darüber hinwegzugehen; das war mein Fehler im
+> Plan, nicht seiner. Die Kürzung hat außerdem verborgen, dass in anderen
+> Schritten `<strong>` überlebt. Der Nachtrag lässt das Skript den ganzen
+> ersten Schritt ausgeben. Verbindlich sind die ersten vier Zeilen.
 
 Weicht die kcal-Zahl ab, wurde das Rezept bei Cookidoo geändert — dann prüfen, ob `basisUnit` weiterhin `Portion` ist und die Zahl zur Seite `https://cookidoo.de/recipes/recipe/de-DE/r16687` passt. Schlägt das Skript mit „NOBR markup survived" fehl, greift die Ersetzung in `stepsFromJson` nicht.
 
@@ -677,3 +691,50 @@ Keine Lücke.
 **Typkonsistenz:** `CookidooNutrition`, `CookidooNutritionValue`, `CookidooRecipeStep` und die Feldnamen `basisQuantity`, `basisUnit`, `values`, `type`, `number`, `unit`, `group`, `steps` sind in Tasks 1–3 identisch benannt. Die API-Felder `unittype`, `unitNotation`, `quantity`, `formattedText`, `recipeSteps`, `recipeNutritions`, `nutritionGroups`, `recipeStepGroups` sind gegen die echte Antwort von `r16687` geprüft.
 
 **Abweichung von der Spec:** Die Spec definiert `CookidooRecipeStep` mit `{ group, text }`. Der Plan ergänzt `number`, weil die API die Schrittnummer als `title` mitliefert und sie beim Anreichern gebraucht wird („nach Schritt 3 die Sahne"). Rein additiv.
+
+---
+
+## Nachtrag nach dem finalen Whole-Branch-Review
+
+Tasks 1–3 waren einzeln approved, jeweils mit null Critical- und
+Important-Findings. Das finale Review über den gesamten Branch fand dennoch drei
+Important-Defekte — belegt an 12 live geladenen Rezepten, nicht vermutet. Zwei
+davon gehen auf Fehler in diesem Plan zurück, nicht auf die Umsetzung.
+
+**F1 — Mehrere Bezugsgrößen, Auswahl nach Array-Position.** `r12345` liefert
+`{quantity: 1, unitNotation: "dose", 548 kcal}` **und**
+`{quantity: 16, unitNotation: null, 8768 kcal}`. Der geplante Mapper nahm den
+ersten Eintrag mit gültigen Werten; bei umgekehrter Reihenfolge wären das eine
+16-fache Überschätzung und ein `basisUnit: ""`. *Planfehler:* die
+Mehrfachbelegung war nicht vorgesehen. Behoben: der beschriftete Eintrag gewinnt
+explizit, `basisUnit: ""` wird nie ausgegeben.
+
+**F2 — `Number()` erfindet Werte.** `Number('') === 0` passiert den NaN-Filter,
+ein leerer Upstream-Wert wird damit zu selbstbewussten 0 kcal. Ebenso wird
+`quantity: {value: 1}` zu `NaN`, obwohl genau diese verschachtelte Form überall
+sonst in dieser API verwendet wird. *Planfehler:* der Plan schrieb `Number(...)`
+vor. Behoben: `typeof x === 'number' && Number.isFinite(x)`; eine vorhandene,
+aber nicht-numerische `quantity` macht den Eintrag unbrauchbar statt still auf 1
+zu defaulten.
+
+**F3 — Markup überlebt im Schritttext.** Siehe Korrekturhinweis bei Task 2.
+*Planfehler:* falsche Annahme über das Upstream-Format. Behoben: alle Tags
+entfernt, Entities dekodiert.
+
+**Begleitend behoben:** das Verifikationsskript prüft jetzt alle Schritte auf
+beliebiges Markup statt nur den ersten auf `nobr`, gibt den ersten Schritt
+vollständig aus und validiert die Rezept-ID.
+
+**Korrektur der Self-Review-Tabelle oben:** Die Zeile „4.3 `<NOBR>` entfernen"
+ist überholt — die Anforderung lautet jetzt „Markup entfernen und Entities
+dekodieren". Die Verweise auf Spec-Abschnitt 4.4 zeigen nach der Spec-Korrektur
+auf 4.5; 4.4 ist jetzt der neue Abschnitt zu mehreren Bezugsgrößen.
+
+**Lehre für Plan 2 (Plugin Stufe 1):** Drei task-lokale Reviews haben alle drei
+Defekte durchgelassen, weil jeder Task für sich exakt dem Plan entsprach —
+inklusive der Planfehler. Gefunden hat sie erst der Durchlauf gegen echte Daten
+in der Breite. Wo ein Plan eine Annahme über ein fremdes Datenformat trifft,
+gehört eine Stichprobe über mehrere echte Datensätze in den Plan, nicht ein
+einzelnes Abnahmebeispiel, das zufällig genau den kritischen Fall nicht enthält.
+Für das Kochbuch-Digitalisieren in Stufe 1 heißt das konkret: die
+Plausibilitätsprüfung gegen alle ~80 Rezepte laufen lassen, nicht gegen drei.
