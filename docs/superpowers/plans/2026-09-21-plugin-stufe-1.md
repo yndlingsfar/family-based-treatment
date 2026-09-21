@@ -1079,7 +1079,28 @@ mkdir -p "${FBT_DATEN:-$HOME/Library/Mobile Documents/com~apple~CloudDocs/FBT-Da
 Für jedes Rezept aus `/tmp/kochbuch.txt`:
 
 - `id` in kebab-case aus dem Titel, eindeutig. Kommt ein Titel doppelt vor (z. B. zwei „Kartoffelsuppe"), Suffix `-2`.
-- `kcal_pro_portion`: Steht im Kochbuch eine Gesamtangabe **und** eine Portionszahl, durch die Portionen teilen. Steht nur eine Gesamtangabe ohne Portionen, `portionen: 1` setzen und die Gesamtangabe übernehmen.
+- `kcal_pro_portion`: Steht im Kochbuch eine Gesamtangabe **und** eine Portionszahl, durch die Portionen teilen.
+
+  > **Korrektur vom 21.09.2026.** Hier stand: „Steht nur eine Gesamtangabe ohne
+  > Portionen, `portionen: 1` setzen und die Gesamtangabe übernehmen." Das war
+  > falsch und hat 13 Rezepte erzeugt, deren „eine Portion" in Wahrheit ein
+  > ganzer Topf ist — die Süßkartoffel-Karottensuppe mit 3,9 kg Zutaten und
+  > 7056 kcal, die Pizzasuppe mit 4,3 kg und 5871 kcal. `/tagesplan` hätte das
+  > als eine Mahlzeit eingeplant. Es ist dieselbe Fehlerart wie `basisUnit: ""`
+  > in Plan 1: eine Zahl, die autoritativ aussieht, aber eine andere
+  > Bezugsgröße meint.
+  >
+  > **Richtig ist:** Fehlt die Portionszahl, wird sie aus der Gesamtmasse
+  > geschätzt und das Rezept bekommt `"portionen_geschaetzt": true`.
+  > Anhaltspunkte aus dem Kochbuch selbst: Suppe „in großen Suppenschüsseln
+  > (ca. 470 g)", „824 kcal pro 340 g Suppe", Shakes „ergibt 2 Gläser".
+  > Richtwerte je Portion: Suppen und Eintöpfe 350–470 g, Nudel- und
+  > Auflaufgerichte 350–450 g, Reis- und Risottogerichte ~350 g,
+  > Shakes und Getränke 250–500 ml.
+  >
+  > Eine geschätzte Portionszahl **muss als geschätzt erkennbar bleiben** —
+  > nach demselben Grundsatz, nach dem eine Prüfung, die nichts geprüft hat,
+  > „nicht prüfbar" sagt statt zu bestehen.
 - **Fehlt die Kalorienangabe ganz: Rezept mit `"pruefen": true` und `"pruefnotiz": "keine kcal-Angabe im Kochbuch"` aufnehmen und `kcal_pro_portion` aus den Zutaten über die Anreicherungstabelle rechnen.** Nicht raten, nicht überspringen.
 - `zutaten[].mittel` setzen, wo eine Zutat einem Schlüssel aus `anreicherung.json` entspricht. Das ist die Grundlage der Plausibilitätsprüfung — je mehr zugeordnet, desto belastbarer.
 - Mengen wie „2 geh. TL" oder „1 Becher" in Gramm umrechnen und den Originalwortlaut in `was` behalten, z. B. `{"menge": 10, "einheit": "g", "was": "Gemuesebruehpaste (2 geh. TL)"}`.
@@ -1107,6 +1128,26 @@ for k, f in struktur.items(): print(' STRUKTUR', k, f)
 for k, n in notizen.items(): print(' NOTIZ   ', k, n)
 "
 ```
+
+**Zweite Abnahme — Plausibilitätsband der Portionsgröße.** Zusätzlich zur
+Strukturprüfung:
+
+```bash
+python3 -c "
+import json
+from fbt.daten import daten_pfad
+d = json.loads((daten_pfad() / 'kochbuch.json').read_text(encoding='utf-8'))
+aus = [(k, v['kcal_pro_portion'], v['portionen']) for k, v in d.items()
+       if not (100 <= v['kcal_pro_portion'] <= 1600)]
+print(f'ausserhalb 100-1600 kcal/Portion: {len(aus)}')
+for k, kp, p in sorted(aus, key=lambda x: -x[1]): print(f'  {k:40s} {kp:7.0f} kcal x{p}')
+"
+```
+
+Eine Portion für ein Kind im Refeeding liegt realistisch zwischen 100 und
+1600 kcal. Alles darüber ist fast sicher eine Gesamtangabe, die als Portion
+etikettiert wurde; alles darunter ist als Mahlzeitenbaustein zu klein und
+gehört geprüft. Jeder Treffer wird einzeln erklärt oder korrigiert.
 
 **Abnahme:** `Strukturfehler: 0`. Jede Plausibilitätsnotiz wird einzeln angesehen: entweder die Übertragung korrigieren oder, wenn die Kochbuchangabe selbst der Ausreißer ist, `"pruefen": true` mit `"pruefnotiz"` setzen. Keine Notiz bleibt unkommentiert. Dies läuft über **alle** Rezepte — das ist die Lehre aus Plan 1.
 
