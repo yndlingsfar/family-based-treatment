@@ -571,3 +571,126 @@ erklärten, Kochbuch-belegten Ausnahmen (`ueberbackener-gemueseauflauf-mit-
 sojawuerfeln`, `glueckskugeln`). Notizzahl sank von 42 auf 41
 (`quark-oelteig-broetchen` bestand die Prüfung nach der ml-Korrektur
 exakt).
+
+## Fix-Runde 4: eine Flüssigkeit, die als ihr eigenes Konzentrat gezählt wurde
+
+### Befund
+
+`risotto-alla-parmigiana` hatte "Brühe (1,5L Wasser + 2 Brühwürfel)" als
+**eine** Zutat mit 1500g und `mittel: bruehpulver` erfasst — dadurch
+rechnete die Prüfung 1,5 Liter Wasser als 1,5 Kilogramm Bouillonpulver
+(3000 kcal statt realistischer ~40 kcal für zwei Würfel). Dieselbe Form
+des Fehlers fand sich in `rigatoni-al-forno-auflauf` ("Wasser + 2 EL
+Gemüsebrühpulver (200ml)", ebenfalls komplett als `bruehpulver` geführt,
+400 kcal statt ~40 kcal).
+
+### Korrektur
+
+Beide Einträge in Wasser (kein `mittel`, kalorisch irrelevant) und die
+tatsächlichen Brühwürfel/das Pulver (~20g, `mittel: bruehpulver`)
+aufgeteilt — das entspricht wörtlich dem, was das Kochbuch beschreibt
+("1,5l Wasser **und** 2 Brühwürfel", zwei separate Mengen, keine
+vorgefertigte Fertigbrühe).
+
+- **risotto-alla-parmigiana**: keine Kochbuch-kcal-Angabe — `kcal_pro_portion`
+  aus der jetzt korrigierten Zutatensumme neu berechnet: **1274 → 534
+  kcal/Portion**. Damit endet die Zahl auf einem Wert, der zum Reis als
+  Hauptkalorienträger passt (400g Reis = 1400 kcal, 65 % des Rezepts),
+  statt von einer falsch gezählten Brühe verzerrt zu sein.
+- **rigatoni-al-forno-auflauf**: `kcal_pro_portion` kommt aus der
+  Kochbuch-Fußnote ("6 Portionen, pro Portion 875 kcal") und wurde **nicht
+  verändert** — nach der Korrektur bestand das Rezept die
+  Plausibilitätsprüfung exakt, `pruefen` wurde zurückgesetzt.
+
+### Standing-Quality-Gate: Ein-Zutat-Dominanz-Check
+
+Damit dieselbe Fehlerform (eine große, meist wässrige Menge fälschlich
+komplett einem kalorienreichen Konzentrat zugeordnet) künftig auffällt,
+gehört dieser Check ab jetzt fest zum Abnahmegate, neben Struktur- und
+Bandcheck:
+
+```bash
+cd /Users/danielsteiner/Projects/family-based-treatment
+python3 -c "
+import json
+from fbt.daten import daten_pfad
+from fbt.anreicherung import lade_mittel, lade_grundzutaten
+d = json.loads((daten_pfad() / 'kochbuch.json').read_text(encoding='utf-8'))
+alle = {**lade_grundzutaten(), **lade_mittel()}
+for k, v in sorted(d.items()):
+    ges = sum(alle[z['mittel']].kcal(z['menge'], z['einheit'])
+              for z in v['zutaten']
+              if z.get('mittel') in alle and z['einheit'] in ('g', 'ml'))
+    if ges <= 0: continue
+    for z in v['zutaten']:
+        if z.get('mittel') not in alle or z['einheit'] not in ('g', 'ml'): continue
+        kc = alle[z['mittel']].kcal(z['menge'], z['einheit'])
+        if kc / ges > 0.5:
+            print(f\"{k:34s} {z['was'][:44]:46s} {kc:7.0f} kcal = {kc/ges:.0%} des Rezepts\")
+"
+```
+
+(Der ursprüngliche Koordinator-Prüfbefehl filtert nicht nach `einheit` und
+bricht auf Zutaten mit `einheit: "stueck"` ab, die zur reinen
+Abdeckungs-Transparenz einen `mittel`-Schlüssel tragen, aber von
+`Mittel.kcal()` nicht berechnet werden können — z. B. Eier/Eigelb. Der
+Filter `z['einheit'] in ('g', 'ml')` oben macht den Check lauffähig und
+verhält sich damit genauso wie `plausibilitaet()` selbst, die
+`"stueck"`-Zutaten ebenfalls überspringt.)
+
+**Jeder Treffer braucht einen Blick, kein Treffer ist automatisch ein
+Fehler** — ein Shake ist zu Recht meistens Sahne, ein Brot zu Recht
+meistens Mehl. Ergebnis dieses Durchlaufs (23 Treffer, alle einzeln
+geprüft):
+
+| Rezept | dominante Zutat | Anteil | Befund |
+|---|---|---:|---|
+| butterkohlrabi | Butter | 92 % | legitim — Gemüse in Butter gedünstet |
+| eiskaffee | Sahne/Milch | 76 % | legitim — Sahne-Kaffee-Getränk |
+| falscher-joghurt | Mascarpone | 51 % | legitim |
+| falscher-joghurt-2 | Mascarpone | 54 % | legitim |
+| french-toast | Milchmädchen (Kondensmilch) | 59 % | legitim |
+| frucht-smoothie | Maltodextrin | 64 % | legitim — bewusste Anreicherung |
+| gebackener-blumenkohl-mit-limetten-aioli | Butter | 75 % | legitim — Butter zum Ausbacken |
+| glueckskugeln | Butter | 53 % | legitim |
+| kartoffelbrei-plus | Sahne | 62 % | legitim — Rezeptzweck ist Sahne-Anreicherung |
+| kartoffelpueree | Ghee/Butter | 53 % | legitim |
+| moehreneintopf | Bacon | 57 % | legitim |
+| notfallbruehe | Beikostöl | 98 % | legitim — reines Öl-Trägergetränk per Konzept |
+| nudelrezept-mit-roter-sauce | rohe Nudeln | 53 % | legitim |
+| nudelsalat-alla-carlo-fortina | Pesto | 62 % | legitim |
+| obst-smoothie-babyglaeschen | Beikostöl | 88 % | legitim — Öl-Anreicherung per Konzept |
+| oreo-shake | flüssige Sahne | 61 % | legitim |
+| power-porridge-schnelle-variante | Sahne | 62 % | legitim |
+| powermilch | Sahne | 70 % | legitim |
+| risotto-alla-parmigiana | Reis | 65 % | legitim (nach der Korrektur oben) |
+| ruehrei | Beikostöl | 78 % | legitim — Eier zaehlen als "stueck" nicht mit |
+| shake-mit-fruchtquatsch | Sahne | 56 % | legitim |
+| tomatensuppe | Rapsöl (300ml) | 52 % | legitim — Kochbuch nennt 300ml wörtlich |
+| vollkornbroetchen-ueber-nacht | Mehl | 54 % | legitim |
+
+**Eine Korrektur vor dieser Tabelle**, nicht im Treffer selbst sichtbar,
+weil sie den Treffer beseitigt hat: `frucht-smoothie` hatte "Obst mit
+Banane, z. B. Honigmelone/Mango + Orangensaft oder Erdbeeren/Blaubeeren +
+Traubensaft" komplett auf `mittel: banane` zugeordnet, obwohl das
+Kochbuch ausdrücklich einen Obstmix beschreibt, bei dem Banane nur *ein*
+Bestandteil ist (Melone/Mango/Beeren sind kalorienärmer). Auf
+`obst-allgemein` (Richtwert 50 kcal/100g) umgestellt; `kcal_pro_portion`
+blieb unverändert (Kochbuch-Spanne 300–450 kcal, Mittelwert 375),
+nur die `pruefnotiz` aktualisiert.
+
+### Ergebnis des Abnahmegates nach Fix-Runde 4
+
+```
+Rezepte gesamt: 79
+Zutaten zuordenbar: 546/628 (87%)
+Strukturfehler: 0
+Notizen: 40, davon nicht pruefbar: 0
+unkommentiert: 0
+```
+
+Zutaten gesamt stieg von 626 auf 628 (zwei Brühe-Einträge wurden je in
+zwei Zutaten aufgeteilt), zuordenbare Zutaten blieben bei 546 (die neuen
+Wasser-Einträge tragen bewusst kein `mittel`). Notizzahl sank von 41 auf
+40 (`rigatoni-al-forno-auflauf` bestand die Prüfung nach der Korrektur
+exakt). Band-Check unverändert bei den zwei bereits erklärten Ausnahmen.
