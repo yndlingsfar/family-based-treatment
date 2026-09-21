@@ -1,0 +1,86 @@
+"""Tests fuer Schema und Plausibilitaetspruefung des Kochbuchs."""
+
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from fbt.anreicherung import lade_mittel
+from fbt.kochbuch import lade_kochbuch, plausibilitaet, pruefe_rezept
+
+TABELLE = Path(__file__).resolve().parent.parent / "referenz" / "anreicherung.json"
+
+GUELTIG = {
+    "titel": "Testshake",
+    "kategorie": "getraenke",
+    "portionen": 1,
+    "kcal_pro_portion": 500,
+    "zutaten": [
+        {"menge": 100, "einheit": "g", "was": "Sahne", "mittel": "sahne-30"},
+        {"menge": 50, "einheit": "g", "was": "Mascarpone", "mittel": "mascarpone"},
+    ],
+    "zubereitung": "Alles verruehren.",
+    "zeit_min": 5,
+    "geraete": [],
+    "allergene": ["milch"],
+    "quelle": "Netzwerk-Kochbuch S. 9",
+}
+
+
+class SchemaTest(unittest.TestCase):
+    def test_gueltiges_rezept_hat_keine_fehler(self):
+        self.assertEqual(pruefe_rezept(GUELTIG), [])
+
+    def test_meldet_fehlendes_pflichtfeld(self):
+        ohne = {k: v for k, v in GUELTIG.items() if k != "kcal_pro_portion"}
+        self.assertIn("kcal_pro_portion", " ".join(pruefe_rezept(ohne)))
+
+    def test_meldet_null_portionen(self):
+        self.assertTrue(pruefe_rezept({**GUELTIG, "portionen": 0}))
+
+    def test_meldet_unbekannte_einheit(self):
+        kaputt = {**GUELTIG, "zutaten": [{"menge": 2, "einheit": "EL", "was": "Oel"}]}
+        self.assertIn("EL", " ".join(pruefe_rezept(kaputt)))
+
+    def test_meldet_unbekannte_kategorie(self):
+        self.assertTrue(pruefe_rezept({**GUELTIG, "kategorie": "quatsch"}))
+
+
+class PlausibilitaetTest(unittest.TestCase):
+    def setUp(self):
+        self.mittel = lade_mittel(TABELLE)
+
+    def test_stimmige_angabe_ergibt_keine_notiz(self):
+        # 100 g Sahne (292) + 50 g Mascarpone (190) = 482, angegeben 500 -> 3,6 %
+        self.assertIsNone(plausibilitaet(GUELTIG, self.mittel))
+
+    def test_abweichung_ueber_zehn_prozent_wird_gemeldet(self):
+        # Dieselben Zutaten, aber 900 kcal behauptet -> 87 % daneben.
+        notiz = plausibilitaet({**GUELTIG, "kcal_pro_portion": 900}, self.mittel)
+        self.assertIsNotNone(notiz)
+        self.assertIn("900", notiz)
+
+    def test_ohne_zuordenbare_zutaten_keine_falsche_sicherheit(self):
+        # Sind die Zutaten nicht der Tabelle zuzuordnen, darf die Pruefung nicht
+        # so tun, als haette sie geprueft.
+        ohne = {**GUELTIG, "zutaten": [{"menge": 200, "einheit": "g", "was": "Kartoffeln"}]}
+        notiz = plausibilitaet(ohne, self.mittel)
+        self.assertIsNotNone(notiz)
+        self.assertIn("nicht pruefbar", notiz)
+
+
+class LadenTest(unittest.TestCase):
+    def test_laedt_und_meldet_kaputte_eintraege_mit_id(self):
+        basis = Path(tempfile.mkdtemp())
+        datei = basis / "kochbuch.json"
+        datei.write_text(
+            json.dumps({"testshake": GUELTIG, "kaputt": {"titel": "X"}}),
+            encoding="utf-8",
+        )
+        with self.assertRaises(Exception) as fall:
+            lade_kochbuch(datei)
+        self.assertIn("kaputt", str(fall.exception))
+
+
+if __name__ == "__main__":
+    unittest.main()
