@@ -3,6 +3,7 @@
   "suesskartoffel":          {"name": "Süßkartoffel roh", "kcal_100g": 86, "dichte_g_ml": null},
   "zwiebel":                 {"name": "Zwiebel", "kcal_100g": 40, "dichte_g_ml": null},
   "karotten":                {"name": "Karotten/Möhren", "kcal_100g": 41, "dichte_g_ml": null},
+  "moehrensaft":             {"name": "Möhrensaft", "kcal_100g": 38, "dichte_g_ml": 1.04},
   "kuerbis":                 {"name": "Kürbis (Hokkaido)", "kcal_100g": 63, "dichte_g_ml": null},
   "tomaten-frisch":          {"name": "Tomaten frisch", "kcal_100g": 18, "dichte_g_ml": null},
   "tomaten-passiert":        {"name": "Passierte Tomaten", "kcal_100g": 30, "dichte_g_ml": null},
