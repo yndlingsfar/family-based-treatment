@@ -1,0 +1,20 @@
+{
+  "beschreibung": "Struktur eines Eintrags in $FBT_DATEN/kochbuch.json. Die Rezeptdaten selbst gehoeren nicht ins Repository.",
+  "schluessel": "kebab-case-id, aus dem Titel abgeleitet",
+  "felder": {
+    "titel": "Text, Pflicht",
+    "kategorie": "eine von: getraenke, fruehstueck, suppen, nudeln, fleisch, vegetarisch, backen, dessert, snack",
+    "portionen": "ganze Zahl > 0, Pflicht",
+    "kcal_pro_portion": "Zahl > 0, Pflicht",
+    "zutaten": "Liste aus {menge: Zahl, einheit: 'g'|'ml'|'stueck', was: Text, mittel: optionaler Schluessel aus anreicherung.json}",
+    "zubereitung": "Text, Pflicht",
+    "zeit_min": "ganze Zahl >= 0, Pflicht",
+    "geraete": "Liste von Texten, z. B. ['thermomix', 'mixer']",
+    "allergene": "Liste von Texten, z. B. ['milch', 'nuesse', 'ei', 'gluten']",
+    "quelle": "Text mit Seitenangabe, Pflicht",
+    "pruefen": "optional true, wenn die Plausibilitaetspruefung angeschlagen hat",
+    "pruefnotiz": "optionaler Text mit dem Befund",
+    "portionen_geschaetzt": "optional true, wenn die Portionszahl nicht im Kochbuch stand und geschaetzt wurde",
+    "zeit_min_geschaetzt": "optional true, wenn die Zubereitungszeit nicht im Kochbuch stand und geschaetzt wurde"
+  }
+}

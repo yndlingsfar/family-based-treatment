@@ -1,0 +1,43 @@
+# Vorlage fuer $FBT_DATEN/profil.toml
+# Diese Datei gehoert NICHT ins Repository, sondern ins Datenverzeichnis.
+# Alles hier ist Beispiel und muss ersetzt werden.
+#
+# WO das Datenverzeichnis liegt, ist eine Entscheidung ueber Zugriff: Es
+# enthaelt Gewicht, Ziel und jede Kalorienzahl. Es darf nicht in einer
+# iCloud- oder sonstigen Cloud-Ablage liegen, in der das Kind selbst
+# angemeldet ist — sonst steht der gesamte Kalorienverlauf auf seinem Geraet.
+# Ein eigener Elternaccount (oder ein lokaler Ordner ausserhalb der
+# Familienfreigabe) und FBT_DATEN entsprechend gesetzt.
+
+[kind]
+rufname = "Vorname"
+geburtsdatum = 2012-01-01   # fuer das BMI-Altersperzentil
+groesse_cm = 150
+
+[ziele]
+# kcal_taeglich gibt die Aerztin vor. Solange die Zeile fehlt oder
+# auskommentiert ist, plant das Plugin, beurteilt aber nicht.
+# kcal_taeglich = 2800
+# kcal_quelle = "wer, wann"
+zunahme_g_pro_woche = 500
+
+[behandlung]
+phase = 1
+wiegen = "blind, 1-2x pro Woche"
+# aerztin = ""
+# naechster_termin = 2026-01-01
+
+[mahlzeiten]
+plan = [
+  "fruehstueck",
+  "snack_vormittag",
+  "mittagessen",
+  "snack_nachmittag",
+  "abendessen",
+  "snack_abend",
+]
+
+[praeferenzen]
+unvertraeglichkeiten = []
+fearfoods = []
+abneigungen = []

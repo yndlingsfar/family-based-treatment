@@ -7,3 +7,7 @@
 # Diese Regel ist eine zweite Absicherung, nicht der eigentliche Schutz.
 daten/
 *.csv
+
+# Python-Bytecode
+__pycache__/
+*.py[cod]

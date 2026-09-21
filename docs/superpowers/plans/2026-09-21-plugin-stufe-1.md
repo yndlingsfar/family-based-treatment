@@ -224,8 +224,17 @@ class ProfilTest(unittest.TestCase):
         self.assertIn(str(leer / "profil.toml"), str(fall.exception))
 
     def test_meldet_fehlende_pflichtangabe(self):
+        # Die uebrigen Abschnitte sind absichtlich vollstaendig: sonst schlaegt
+        # die Pruefung auf [mahlzeiten] zuerst an und das Fehlen von
+        # geburtsdatum kaeme nie zur Sprache.
         with self.assertRaises(DatenFehler) as fall:
-            lade_profil(schreibe('[kind]\nrufname = "Testkind"\n'))
+            lade_profil(
+                schreibe(
+                    '[kind]\nrufname = "Testkind"\n\n[ziele]\n'
+                    'zunahme_g_pro_woche = 500\n\n[mahlzeiten]\n'
+                    'plan = ["fruehstueck"]\n'
+                )
+            )
         self.assertIn("geburtsdatum", str(fall.exception))
 
     def test_lehnt_wahrheitswert_als_zahl_ab(self):
@@ -403,7 +412,7 @@ def _profil_aus_toml(roh: dict, datei: Path) -> Profil:
 python3 -m unittest tests.test_daten -v
 ```
 
-Erwartet: PASS, 11 Tests.
+Erwartet: PASS, 10 Tests.
 
 - [ ] **Step 5: Profilvorlage anlegen**
 
@@ -1070,7 +1079,28 @@ mkdir -p "${FBT_DATEN:-$HOME/Library/Mobile Documents/com~apple~CloudDocs/FBT-Da
 Für jedes Rezept aus `/tmp/kochbuch.txt`:
 
 - `id` in kebab-case aus dem Titel, eindeutig. Kommt ein Titel doppelt vor (z. B. zwei „Kartoffelsuppe"), Suffix `-2`.
-- `kcal_pro_portion`: Steht im Kochbuch eine Gesamtangabe **und** eine Portionszahl, durch die Portionen teilen. Steht nur eine Gesamtangabe ohne Portionen, `portionen: 1` setzen und die Gesamtangabe übernehmen.
+- `kcal_pro_portion`: Steht im Kochbuch eine Gesamtangabe **und** eine Portionszahl, durch die Portionen teilen.
+
+  > **Korrektur vom 21.09.2026.** Hier stand: „Steht nur eine Gesamtangabe ohne
+  > Portionen, `portionen: 1` setzen und die Gesamtangabe übernehmen." Das war
+  > falsch und hat 13 Rezepte erzeugt, deren „eine Portion" in Wahrheit ein
+  > ganzer Topf ist — die Süßkartoffel-Karottensuppe mit 3,9 kg Zutaten und
+  > 7056 kcal, die Pizzasuppe mit 4,3 kg und 5871 kcal. `/tagesplan` hätte das
+  > als eine Mahlzeit eingeplant. Es ist dieselbe Fehlerart wie `basisUnit: ""`
+  > in Plan 1: eine Zahl, die autoritativ aussieht, aber eine andere
+  > Bezugsgröße meint.
+  >
+  > **Richtig ist:** Fehlt die Portionszahl, wird sie aus der Gesamtmasse
+  > geschätzt und das Rezept bekommt `"portionen_geschaetzt": true`.
+  > Anhaltspunkte aus dem Kochbuch selbst: Suppe „in großen Suppenschüsseln
+  > (ca. 470 g)", „824 kcal pro 340 g Suppe", Shakes „ergibt 2 Gläser".
+  > Richtwerte je Portion: Suppen und Eintöpfe 350–470 g, Nudel- und
+  > Auflaufgerichte 350–450 g, Reis- und Risottogerichte ~350 g,
+  > Shakes und Getränke 250–500 ml.
+  >
+  > Eine geschätzte Portionszahl **muss als geschätzt erkennbar bleiben** —
+  > nach demselben Grundsatz, nach dem eine Prüfung, die nichts geprüft hat,
+  > „nicht prüfbar" sagt statt zu bestehen.
 - **Fehlt die Kalorienangabe ganz: Rezept mit `"pruefen": true` und `"pruefnotiz": "keine kcal-Angabe im Kochbuch"` aufnehmen und `kcal_pro_portion` aus den Zutaten über die Anreicherungstabelle rechnen.** Nicht raten, nicht überspringen.
 - `zutaten[].mittel` setzen, wo eine Zutat einem Schlüssel aus `anreicherung.json` entspricht. Das ist die Grundlage der Plausibilitätsprüfung — je mehr zugeordnet, desto belastbarer.
 - Mengen wie „2 geh. TL" oder „1 Becher" in Gramm umrechnen und den Originalwortlaut in `was` behalten, z. B. `{"menge": 10, "einheit": "g", "was": "Gemuesebruehpaste (2 geh. TL)"}`.
@@ -1098,6 +1128,26 @@ for k, f in struktur.items(): print(' STRUKTUR', k, f)
 for k, n in notizen.items(): print(' NOTIZ   ', k, n)
 "
 ```
+
+**Zweite Abnahme — Plausibilitätsband der Portionsgröße.** Zusätzlich zur
+Strukturprüfung:
+
+```bash
+python3 -c "
+import json
+from fbt.daten import daten_pfad
+d = json.loads((daten_pfad() / 'kochbuch.json').read_text(encoding='utf-8'))
+aus = [(k, v['kcal_pro_portion'], v['portionen']) for k, v in d.items()
+       if not (100 <= v['kcal_pro_portion'] <= 1600)]
+print(f'ausserhalb 100-1600 kcal/Portion: {len(aus)}')
+for k, kp, p in sorted(aus, key=lambda x: -x[1]): print(f'  {k:40s} {kp:7.0f} kcal x{p}')
+"
+```
+
+Eine Portion für ein Kind im Refeeding liegt realistisch zwischen 100 und
+1600 kcal. Alles darüber ist fast sicher eine Gesamtangabe, die als Portion
+etikettiert wurde; alles darunter ist als Mahlzeitenbaustein zu klein und
+gehört geprüft. Jeder Treffer wird einzeln erklärt oder korrigiert.
 
 **Abnahme:** `Strukturfehler: 0`. Jede Plausibilitätsnotiz wird einzeln angesehen: entweder die Übertragung korrigieren oder, wenn die Kochbuchangabe selbst der Ausreißer ist, `"pruefen": true` mit `"pruefnotiz"` setzen. Keine Notiz bleibt unkommentiert. Dies läuft über **alle** Rezepte — das ist die Lehre aus Plan 1.
 
@@ -1203,11 +1253,20 @@ class AnreichernTest(unittest.TestCase):
         self.assertTrue(self.mittel[e.vorschlaege[0].mittel_id].neutral)
 
     def test_schiesst_nicht_ueber_das_ziel_hinaus(self):
+        # erreicht_kcal ist die Summe fuer ALLE Portionen, das Ziel gilt pro
+        # Portion. Der Vergleich muss mit portionen multipliziert werden.
+        portionen = OHNE_ERSETZBARES["portionen"]
         e = anreichern(OHNE_ERSETZBARES, 600, self.mittel)
-        self.assertLessEqual(e.erreicht_kcal, 600 * 1.05)
+        self.assertLessEqual(e.erreicht_kcal, 600 * portionen * 1.05)
+
+    def test_nutzt_maltodextrin_als_letztes_mittel_ausserhalb_der_refeeding_phase(self):
+        e = anreichern(OHNE_ERSETZBARES, 2000, self.mittel)
+        self.assertIn("maltodextrin", [v.mittel_id for v in e.vorschlaege])
 
     def test_meidet_maltodextrin_in_der_refeeding_phase(self):
-        e = anreichern(OHNE_ERSETZBARES, 900, self.mittel, refeeding_phase=True)
+        # Gleiches Ziel wie im Test darueber, nur mit refeeding_phase=True:
+        # nur so zeigt sich, dass die Sperre wirkt und nicht bloss nie greift.
+        e = anreichern(OHNE_ERSETZBARES, 2000, self.mittel, refeeding_phase=True)
         self.assertNotIn("maltodextrin", [v.mittel_id for v in e.vorschlaege])
         self.assertTrue(any("Maltodextrin" in w for w in e.warnungen))
 
@@ -1259,11 +1318,14 @@ ERSATZ = {
 }
 
 # Reihenfolge, in der zugegeben wird: neutrales Fett zuerst, dann fettreiche
-# Milchprodukte, dann Nussmus. Kohlenhydrate stehen bewusst am Ende.
-ZUGABE_REIHENFOLGE = ("rapsoel", "cashewmus", "mascarpone", "creme-double", "mandelmus")
+# Milchprodukte, dann Nussmus. Maltodextrin steht als reines Kohlenhydrat ganz
+# am Ende (Refeeding-Syndrom-Prophylaxe) und faellt bei refeeding_phase=True
+# ueber seine Warnung aus der Auswahl.
+ZUGABE_REIHENFOLGE = ("rapsoel", "cashewmus", "mascarpone", "creme-double",
+                      "mandelmus", "maltodextrin")
 
 MAX_ZUGABE_G = {"rapsoel": 40, "cashewmus": 40, "mascarpone": 100,
-                "creme-double": 100, "mandelmus": 50}
+                "creme-double": 100, "mandelmus": 50, "maltodextrin": 40}
 
 
 @dataclass(frozen=True)
