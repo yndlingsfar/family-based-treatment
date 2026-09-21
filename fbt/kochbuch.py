@@ -11,6 +11,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from fbt.anreicherung import AnreicherungFehler
 from fbt.daten import DatenFehler, daten_pfad
 
 KATEGORIEN = frozenset(
@@ -108,10 +109,17 @@ def plausibilitaet(roh: dict, mittel: dict, grund: dict | None = None) -> str | 
     Gibt None zurueck, wenn beides zusammenpasst. Sonst eine Notiz. Laesst sich
     keine Zutat zuordnen, wird das ausdruecklich gesagt — eine Pruefung, die
     nichts geprueft hat, darf nicht wie eine bestandene aussehen.
+
+    Zutaten, die zwar einen Tabellenschluessel tragen, aber nicht gerechnet
+    werden koennen (Einheit 'stueck', fehlende Dichte), werden gezaehlt und in
+    der Notiz benannt. Frueher fielen sie stumm heraus — bei einem Rezept, das
+    seine groesste Zutat in Stueck fuehrt, meldete die Pruefung dann eine
+    Abweichung, die vor allem die eigene Luecke war.
     """
     grund = grund or {}
     summe = 0.0
     zugeordnet = 0
+    nicht_gerechnet: dict[str, list[str]] = {}
     for zutat in roh.get("zutaten", []):
         schluessel = zutat.get("mittel")
         if schluessel in mittel:
@@ -120,29 +128,65 @@ def plausibilitaet(roh: dict, mittel: dict, grund: dict | None = None) -> str | 
             tabelle = grund
         else:
             continue
+        name = str(zutat.get("was") or tabelle[schluessel].name)
         einheit = zutat.get("einheit")
         if einheit not in ("g", "ml"):
+            nicht_gerechnet.setdefault(f"Einheit '{einheit}'", []).append(name)
             continue
         try:
             summe += tabelle[schluessel].kcal(zutat["menge"], einheit)
-        except Exception:  # noqa: BLE001 — Fehlerdetails haengen am Mittel
+        except AnreicherungFehler as fehler:
+            # Nur das ist hier zu erwarten: fehlende Dichte, unbekannte
+            # Einheit, negative Menge. Alles andere ist ein Strukturfehler
+            # und gehoert nicht verschluckt, sondern zu pruefe_rezept.
+            nicht_gerechnet.setdefault(str(fehler), []).append(name)
             continue
         zugeordnet += 1
 
+    luecke = _luecken_satz(nicht_gerechnet)
+
     if zugeordnet == 0:
-        return "nicht pruefbar: keine Zutat liess sich einer der beiden Tabellen (Anreicherung, Grundzutaten) zuordnen."
+        return (
+            "nicht pruefbar: keine Zutat liess sich einer der beiden Tabellen "
+            "(Anreicherung, Grundzutaten) zuordnen." + luecke
+        )
 
     behauptet = roh["kcal_pro_portion"] * roh["portionen"]
     if summe == 0:
-        return f"nicht pruefbar: zugeordnete Zutaten ergeben 0 kcal, behauptet sind {behauptet:.0f}."
+        return (
+            f"nicht pruefbar: zugeordnete Zutaten ergeben 0 kcal, behauptet "
+            f"sind {behauptet:.0f}." + luecke
+        )
     abweichung = abs(behauptet - summe) / summe
     if abweichung <= TOLERANZ:
-        return None
+        # Innerhalb der Toleranz, aber nicht vollstaendig gerechnet: das ist
+        # kein Alarm, darf aber auch nicht als glatt bestandene Pruefung
+        # durchgehen.
+        if not nicht_gerechnet:
+            return None
+        return (
+            f"innerhalb der Toleranz ({abweichung * 100:.0f} %), aber nicht "
+            f"vollstaendig gerechnet." + luecke
+        )
     return (
         f"Abweichung {abweichung * 100:.0f} %: {zugeordnet} zugeordnete Zutaten "
         f"ergeben {summe:.0f} kcal, angegeben sind {behauptet:.0f} kcal. "
         f"Unzugeordnete Zutaten koennen die Differenz erklaeren — bitte pruefen."
+        + luecke
     )
+
+
+def _luecken_satz(nicht_gerechnet: dict[str, list[str]]) -> str:
+    """Benennt die Zutaten, die einen Schluessel tragen, aber nicht zaehlten."""
+    if not nicht_gerechnet:
+        return ""
+    anzahl = sum(len(namen) for namen in nicht_gerechnet.values())
+    wort = "Zutat" if anzahl == 1 else "Zutaten"
+    teile = [
+        f"{grund}: {', '.join(namen)}"
+        for grund, namen in sorted(nicht_gerechnet.items())
+    ]
+    return f" {anzahl} {wort} nicht gerechnet ({'; '.join(teile)})."
 
 
 def lade_kochbuch(datei: Path | None = None) -> dict[str, Rezept]:

@@ -121,6 +121,58 @@ class PlausibilitaetTest(unittest.TestCase):
         self.assertIsNotNone(notiz)
         self.assertIn("nicht pruefbar", notiz)
 
+    def test_uebersprungene_stueck_zutat_wird_gezaehlt_und_benannt(self):
+        """Eine Pruefung, die die groesste Zutat auslaesst, muss das sagen.
+
+        Fruher fiel jede 'stueck'-Zutat stumm heraus — die gemeldete
+        Abweichung war dann zu einem guten Teil die eigene Luecke.
+        """
+        grund = lade_grundzutaten(GRUNDZUTATEN)
+        mit_eiern = {
+            **GUELTIG,
+            "kcal_pro_portion": 900,
+            "zutaten": [
+                *GUELTIG["zutaten"],
+                {"menge": 3, "einheit": "stueck", "was": "Eier", "mittel": "ei-ganz"},
+            ],
+        }
+        notiz = plausibilitaet(mit_eiern, self.mittel, grund)
+        self.assertIn("1 Zutat nicht gerechnet", notiz)
+        self.assertIn("stueck", notiz)
+        self.assertIn("Eier", notiz)
+
+    def test_uebersprungene_zutat_faellt_auch_innerhalb_der_toleranz_auf(self):
+        grund = lade_grundzutaten(GRUNDZUTATEN)
+        mit_eiern = {
+            **GUELTIG,
+            "zutaten": [
+                *GUELTIG["zutaten"],
+                {"menge": 3, "einheit": "stueck", "was": "Eier", "mittel": "ei-ganz"},
+            ],
+        }
+        notiz = plausibilitaet(mit_eiern, self.mittel, grund)
+        self.assertIsNotNone(notiz, "Eine nicht gerechnete Zutat darf nicht "
+                                    "als bestandene Pruefung durchgehen.")
+        self.assertIn("nicht vollstaendig gerechnet", notiz)
+
+    def test_fehlende_dichte_wird_benannt_statt_verschluckt(self):
+        # joghurt-griech hat keine Dichte: in ml laesst sich daraus nichts
+        # rechnen, und genau das gehoert in die Notiz.
+        in_ml = {
+            **GUELTIG,
+            "zutaten": [
+                *GUELTIG["zutaten"],
+                {"menge": 200, "einheit": "ml", "was": "Joghurt",
+                 "mittel": "joghurt-griech"},
+            ],
+        }
+        notiz = plausibilitaet(in_ml, self.mittel)
+        self.assertIn("nicht gerechnet", notiz)
+        self.assertIn("Dichte", notiz)
+
+    def test_ohne_luecken_bleibt_eine_bestandene_pruefung_still(self):
+        self.assertIsNone(plausibilitaet(GUELTIG, self.mittel))
+
     def test_plausibilitaet_ohne_drittes_argument_bleibt_rueckwaertskompatibel(self):
         # Bestehende Aufrufe mit nur (roh, mittel) muessen unveraendert
         # funktionieren.
