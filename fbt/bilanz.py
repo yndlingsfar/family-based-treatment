@@ -74,8 +74,8 @@ class Tagesbilanz:
 
     @property
     def vollstaendig(self) -> bool:
-        """True wenn alle Gerichtanteile explizit angegeben wurden."""
-        return len(self.angenommen) == 0
+        """Weder fehlende Kalorienangaben noch angenommene Anteile."""
+        return not self.unbekannte and not self.angenommen
 
 
 def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
@@ -152,10 +152,19 @@ def elternansicht(b: Tagesbilanz) -> str:
                 f"{anteil} -> {g.kcal_tatsaechlich:.0f}"
             )
     zeilen.append("")
-    # Totalen mit Vollstaendigkeitsmarker
+    # Totalen mit Vollstaendigkeitsmarker: unterscheide Arten der Luecken
     unvollstaendig_marker = ""
     if not b.vollstaendig:
-        unvollstaendig_marker = f"  (unvollstaendig: {len(b.angenommen)} Gerichte ohne Angabe)"
+        luecken = []
+        if b.unbekannte:
+            count = len(b.unbekannte)
+            wort = "Gericht" if count == 1 else "Gerichte"
+            luecken.append(f"{count} {wort} ohne Kalorienangabe")
+        if b.angenommen:
+            count = len(b.angenommen)
+            wort = "Gericht" if count == 1 else "Gerichte"
+            luecken.append(f"{count} {wort} ohne Anteil")
+        unvollstaendig_marker = f"  (unvollstaendig: {', '.join(luecken)})"
     zeilen.append(f"geplant:     {b.kcal_geplant:.0f} kcal{unvollstaendig_marker}")
     zeilen.append(f"tatsaechlich: {b.kcal_tatsaechlich:.0f} kcal{unvollstaendig_marker}")
     if b.ziel_kcal is not None:

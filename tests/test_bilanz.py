@@ -82,6 +82,56 @@ name = "Fruehstueck"
   anteil_gegessen = 0.6
 """
 
+NUR_UNBEKANNTE = """
+datum = 2026-02-03
+ziel_kcal = 3000
+
+[[mahlzeit]]
+zeit = "12:00"
+name = "Mittag"
+
+  [[mahlzeit.gericht]]
+  titel = "Unbekanntes Gericht"
+  quelle = "frei"
+"""
+
+NUR_ANGENOMMEN = """
+datum = 2026-02-03
+ziel_kcal = 3000
+
+[[mahlzeit]]
+zeit = "07:30"
+name = "Fruehstueck"
+
+  [[mahlzeit.gericht]]
+  titel = "Porridge"
+  quelle = "kochbuch:porridge"
+  kcal_geplant = 800
+
+  [[mahlzeit.gericht]]
+  titel = "Shake"
+  quelle = "kochbuch:shake"
+  kcal_geplant = 500
+"""
+
+BEIDE_UNBEKANNT = """
+datum = 2026-02-03
+ziel_kcal = 3000
+
+[[mahlzeit]]
+zeit = "12:00"
+name = "Mittag"
+
+  [[mahlzeit.gericht]]
+  titel = "Gekochtes"
+  quelle = "frei"
+
+  [[mahlzeit.gericht]]
+  titel = "Shake"
+  quelle = "kochbuch:shake"
+  kcal_geplant = 500
+"""
+
 
 def schreibe(inhalt: str) -> Path:
     basis = Path(tempfile.mkdtemp()) / "FBT Daten"
@@ -154,24 +204,57 @@ class AnsichtTest(unittest.TestCase):
         self.assertIn("Porridge", text)
         self.assertIn("07:30", text)
 
-    def test_elternansicht_markiert_unvollstaendigkeit_in_totalen(self):
-        """Wenn anteil_gegessen fehlt, wird das in den Totalen markiert."""
-        b_unvollstaendig = lade_tag(date(2026, 2, 3), schreibe(OHNE_ANTEIL))
-        text = elternansicht(b_unvollstaendig)
+    def test_vollstaendig_false_wenn_nur_unbekannte(self):
+        """Fall 1: nur unbekannte — vollstaendig ist False."""
+        b = lade_tag(date(2026, 2, 3), schreibe(NUR_UNBEKANNTE))
+        self.assertFalse(b.vollstaendig)
+        text = elternansicht(b)
         self.assertIn("unvollstaendig", text)
-        # Marker sollte auf beiden Zeilen erscheinen
+        self.assertIn("Kalorienangabe", text)
+        # Marker sollte nicht "Anteil" erwaehnen wenn nur kcal fehlt
+        lines = text.split("\n")
+        marker_lines = [l for l in lines if "unvollstaendig" in l]
+        self.assertTrue(any("Kalorienangabe" in l for l in marker_lines))
+
+    def test_vollstaendig_false_wenn_nur_angenommen(self):
+        """Fall 2: nur angenommen — vollstaendig ist False."""
+        b = lade_tag(date(2026, 2, 3), schreibe(NUR_ANGENOMMEN))
+        self.assertFalse(b.vollstaendig)
+        text = elternansicht(b)
+        self.assertIn("unvollstaendig", text)
+        self.assertIn("Anteil", text)
+        # Marker sollte nicht "Kalorienangabe" erwaehnen wenn nur Anteil fehlt
+        lines = text.split("\n")
+        marker_lines = [l for l in lines if "unvollstaendig" in l]
+        self.assertFalse(any("Kalorienangabe" in l for l in marker_lines if "Anteil" not in l))
+
+    def test_vollstaendig_false_wenn_beide(self):
+        """Fall 3: beide unbekannte und angenommen — vollstaendig ist False."""
+        b = lade_tag(date(2026, 2, 3), schreibe(BEIDE_UNBEKANNT))
+        self.assertFalse(b.vollstaendig)
+        text = elternansicht(b)
+        self.assertIn("unvollstaendig", text)
+        self.assertIn("Kalorienangabe", text)
+        self.assertIn("Anteil", text)
+
+    def test_vollstaendig_true_wenn_leer(self):
+        """Fall 4: keine unbekannte, keine angenommen — vollstaendig ist True."""
+        b = lade_tag(date(2026, 2, 3), schreibe(TAG))
+        self.assertTrue(b.vollstaendig)
+        text = elternansicht(b)
+        # Keine unvollstaendig-Marker auf den Totalen
         lines = text.split("\n")
         geplant_line = [l for l in lines if l.startswith("geplant:")][0]
         tatsaechlich_line = [l for l in lines if l.startswith("tatsaechlich:")][0]
-        self.assertIn("unvollstaendig", geplant_line)
-        self.assertIn("unvollstaendig", tatsaechlich_line)
+        self.assertNotIn("unvollstaendig", geplant_line)
+        self.assertNotIn("unvollstaendig", tatsaechlich_line)
 
-    def test_elternansicht_zeigt_angenommene_anteile(self):
-        """Gerichte ohne anteil_gegessen werden als 'als vollstaendig gerechnet' gelistet."""
-        b_unvollstaendig = lade_tag(date(2026, 2, 3), schreibe(OHNE_ANTEIL))
-        text = elternansicht(b_unvollstaendig)
-        self.assertIn("Ohne Angabe, als vollstaendig gerechnet", text)
-        self.assertIn("Fruehstueck: Porridge", text)
+    def test_anteil_1_0_landet_nicht_in_angenommen(self):
+        """Explicit anteil_gegessen = 1.0 wird nicht als angenommen gezaehlt."""
+        b = lade_tag(date(2026, 2, 3), schreibe(TAG))
+        self.assertEqual(len(b.angenommen), 0)
+        text = elternansicht(b)
+        self.assertNotIn("Ohne Angabe, als vollstaendig gerechnet", text)
 
 
 if __name__ == "__main__":
