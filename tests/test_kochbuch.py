@@ -158,6 +158,23 @@ class LadenTest(unittest.TestCase):
         rezepte = lade_kochbuch(datei)
         self.assertTrue(rezepte["testshake"].portionen_geschaetzt is False)
 
+    def test_zeit_min_geschaetzt_wird_geladen(self):
+        basis = Path(tempfile.mkdtemp())
+        datei = basis / "kochbuch.json"
+        datei.write_text(
+            json.dumps({"testshake": {**GUELTIG, "zeit_min_geschaetzt": True}}),
+            encoding="utf-8",
+        )
+        rezepte = lade_kochbuch(datei)
+        self.assertTrue(rezepte["testshake"].zeit_min_geschaetzt is True)
+
+    def test_zeit_min_geschaetzt_ist_ohne_angabe_false(self):
+        basis = Path(tempfile.mkdtemp())
+        datei = basis / "kochbuch.json"
+        datei.write_text(json.dumps({"testshake": GUELTIG}), encoding="utf-8")
+        rezepte = lade_kochbuch(datei)
+        self.assertTrue(rezepte["testshake"].zeit_min_geschaetzt is False)
+
 
 if __name__ == "__main__":
     unittest.main()

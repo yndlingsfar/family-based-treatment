@@ -464,3 +464,110 @@ Zeitpunkt im Arbeitsverzeichnis des Repositories.
   Dreieck" → French Toast, genannte Zutatensumme) den richtigen Rezepten
   zugeordnet; in wenigen Fällen (siehe orangen-moehren-shake oben) blieb
   die Zuordnung unsicher.
+
+## Fix-Runde 3: ml-als-g-Mengen korrigiert, Zeitschätzung sichtbar gemacht
+
+### Teil A: 18 Zutaten, die als Milliliter gemeint, aber als Gramm geführt waren
+
+**Befund:** Wo das Kochbuch eine Ölmenge in "ml" nannte (z. B. "2 EL Öl,
+ca. 28ml"), wurde sie durchgängig mit `einheit: "g"` und derselben Zahl
+erfasst statt mit `einheit: "ml"`. `Mittel.kcal()` wendet die Dichte nur
+bei `einheit: "ml"` an — bei `"g"` wird die Zahl direkt als Gramm
+gerechnet. Da Öl leichter als Wasser ist (Dichte 0.91–0.93), überschätzte
+das systematisch die Kalorien dieser Einträge, in eine Richtung: immer zu
+hoch, nie zu niedrig.
+
+**Fund per Skript** (Koordinator-Skript, exakt 18 Treffer in 17
+Rezepten):
+
+| Rezept | Zutat | Menge | vorher (g gerechnet) | nachher (ml, Dichte) |
+|---|---|---:|---:|---:|
+| couscous-mit-gefluegel-und-tomatensalat | Olivenöl (5-10 EL, ca. 105ml) | 105 | 928 kcal | 845 kcal |
+| notfallbruehe | Beikostöl (5 EL) | 70 | 619 kcal | 569 kcal |
+| kuerbiscremesuppe | Kokosfett/Speiseöl (4 EL) | 56 | 495 kcal | 455 kcal |
+| quark-oelteig-broetchen | Rapsöl (4 EL) | 56 | 495 kcal | 455 kcal |
+| couscous-salat-mit-joghurt | Leinöl (4 EL, Hauptrezept) | 56 | 495 kcal | 460 kcal |
+| couscous-salat-mit-joghurt | Leinöl (2 EL, falscher Joghurt) | 28 | 248 kcal | 230 kcal |
+| kaesepolenta-mit-joghurt | Leinöl (2 EL, falscher Joghurt) | 28 | 248 kcal | 230 kcal |
+| gehaltvolle-klare-suppe | Beikostöl (2-3 EL) | 38 | 336 kcal | 309 kcal |
+| ruehrei | Beikostöl (2-3 EL) | 38 | 336 kcal | 309 kcal |
+| cremiges-parmesan-huehnchen | Olivenöl (2 EL) | 28 | 248 kcal | 226 kcal |
+| bananen-brownie | Beikostöl (2 EL) | 28 | 248 kcal | 228 kcal |
+| gemuesekuchen | Sonnenblumen-/Rapsöl (2 EL) | 28 | 248 kcal | 228 kcal |
+| lasagne | Öl (2 EL) | 28 | 248 kcal | 228 kcal |
+| ramen-suppe | Öl (2 EL) | 28 | 248 kcal | 228 kcal |
+| schneller-knoedelauflauf | Öl (2 EL) | 28 | 248 kcal | 228 kcal |
+| risotto-alla-parmigiana | Olivenöl (1 EL) | 14 | 124 kcal | 113 kcal |
+| orangen-moehren-shake | Leinöl (1 TL) | 5 | 44 kcal | 41 kcal |
+| smoothie-bowl | Ahornsirup/Agavendicksaft/Honig (1 EL) | 15 | 39 kcal | 52 kcal |
+
+Alle 18 auf `einheit: "ml"` umgestellt, `menge` unverändert (die Zahl war
+schon die Millilitermenge). 17 der 18 Einträge sind Öle (Dichte
+0.91–0.93, also leichter als Wasser) und wurden dadurch kleiner; der
+18., Ahornsirup (Dichte 1.33, schwerer als Wasser), wurde dadurch
+**größer** (39 → 52 kcal) — dieselbe Korrektur, nur in die andere
+Richtung, weil Sirup dichter ist als das Gramm-für-Milliliter-Modell
+angenommen hatte. Netto über alle 18: 458 kcal weniger, wie vom
+Koordinator gemessen (17 Öl-Entlastungen von zusammen 471 kcal minus die
+eine Sirup-Erhöhung von 13 kcal).
+
+**`kcal_pro_portion` neu berechnet, wo der Wert aus der Zutatensumme
+rekonstruiert war** (nicht aus dem Kochbuch selbst):
+
+| Rezept | vorher | nachher |
+|---|---:|---:|
+| bananen-brownie | 1174 | 1174 (unveraendert, Rundung) |
+| couscous-salat-mit-joghurt | 1026 | 1026 (unveraendert, Rundung) |
+| cremiges-parmesan-huehnchen | 613 | 613 (unveraendert, Rundung) |
+| kuerbiscremesuppe | 656 | 656 (unveraendert, Rundung) |
+| smoothie-bowl | 858 | 858 (unveraendert, Rundung) |
+| risotto-alla-parmigiana | 484 | **1274** |
+
+`risotto-alla-parmigiana` änderte sich deutlich: In Runde 1 wurde der
+fehlende Reis manuell ergänzt (134 → 484 kcal), in Runde 2 wurde derselbe
+Reis zusätzlich automatisch über `grundzutaten.json` zugeordnet — beide
+Zählungen trafen sich auf denselben Kalorienträger, ohne dass die eine von
+der anderen wusste. In Fix-Runde 3 aus der vollen, jetzt widerspruchsfreien
+Zutatensumme (Reis, Butter, Parmesan, Olivenöl, Weißwein, Brühe) neu
+berechnet: 1274 kcal/Portion — deutlich plausibler für ein
+Weißwein-Butter-Parmesan-Risotto als Hauptspeise als die vorherigen 134
+oder 484.
+
+**Bei allen anderen 11 betroffenen Rezepten stammt `kcal_pro_portion` aus
+einer echten Kochbuchangabe und wurde nicht verändert** — nur die
+`pruefnotiz` mit den jetzt korrekten Abweichungszahlen aktualisiert:
+couscous-mit-gefluegel-und-tomatensalat, gehaltvolle-klare-suppe,
+gemuesekuchen, kaesepolenta-mit-joghurt, lasagne, notfallbruehe,
+orangen-moehren-shake, ramen-suppe, ruehrei, schneller-knoedelauflauf.
+Eine davon, `quark-oelteig-broetchen`, passt nach der Korrektur exakt
+innerhalb der Toleranz — `pruefen` wurde dort auf `false` zurückgesetzt.
+
+### Teil B: `zeit_min_geschaetzt`
+
+Wie in Runde 1 dokumentiert, nennt das Kochbuch nie eine
+Gesamtzubereitungszeit — `zeit_min` war für **alle 79 Rezepte** eine
+Schätzung nach Rezeptkomplexität, aber ohne Kennzeichnung von einer
+Kochbuchangabe nicht zu unterscheiden. Analog zu `portionen_geschaetzt`:
+neues Feld `zeit_min_geschaetzt: bool = False` im `Rezept`-Dataclass
+(`fbt/kochbuch.py`), gelesen in `lade_kochbuch`, dokumentiert in
+`referenz/kochbuch.schema.json`, zwei neue Tests in
+`tests/test_kochbuch.py`. `pruefe_rezept` unverändert. **Alle 79 Rezepte**
+tragen jetzt `zeit_min_geschaetzt: true`.
+
+### Ergebnis des Abnahmegates nach Fix-Runde 3
+
+```
+Rezepte gesamt: 79
+Zutaten zuordenbar: 546/626 (87%)
+Strukturfehler: 0
+Notizen: 41, davon nicht pruefbar: 0
+unkommentiert: 0
+portionen_geschaetzt: 54
+zeit_min_geschaetzt: 79
+```
+
+Band-Check (100–1600 kcal/Portion) unverändert bei den zwei bereits
+erklärten, Kochbuch-belegten Ausnahmen (`ueberbackener-gemueseauflauf-mit-
+sojawuerfeln`, `glueckskugeln`). Notizzahl sank von 42 auf 41
+(`quark-oelteig-broetchen` bestand die Prüfung nach der ml-Korrektur
+exakt).

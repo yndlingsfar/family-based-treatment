@@ -37,6 +37,7 @@ class Rezept:
     pruefen: bool = False
     pruefnotiz: str | None = None
     portionen_geschaetzt: bool = False
+    zeit_min_geschaetzt: bool = False
 
     @property
     def kcal_gesamt(self) -> float:
@@ -173,6 +174,7 @@ def lade_kochbuch(datei: Path | None = None) -> dict[str, Rezept]:
             pruefen=bool(eintrag.get("pruefen", False)),
             pruefnotiz=eintrag.get("pruefnotiz"),
             portionen_geschaetzt=bool(eintrag.get("portionen_geschaetzt", False)),
+            zeit_min_geschaetzt=bool(eintrag.get("zeit_min_geschaetzt", False)),
         )
     if fehler:
         raise DatenFehler(
