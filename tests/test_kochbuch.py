@@ -106,6 +106,23 @@ class LadenTest(unittest.TestCase):
             lade_kochbuch(datei)
         self.assertIn("kaputt", str(fall.exception))
 
+    def test_portionen_geschaetzt_wird_geladen(self):
+        basis = Path(tempfile.mkdtemp())
+        datei = basis / "kochbuch.json"
+        datei.write_text(
+            json.dumps({"testshake": {**GUELTIG, "portionen_geschaetzt": True}}),
+            encoding="utf-8",
+        )
+        rezepte = lade_kochbuch(datei)
+        self.assertTrue(rezepte["testshake"].portionen_geschaetzt is True)
+
+    def test_portionen_geschaetzt_ist_ohne_angabe_false(self):
+        basis = Path(tempfile.mkdtemp())
+        datei = basis / "kochbuch.json"
+        datei.write_text(json.dumps({"testshake": GUELTIG}), encoding="utf-8")
+        rezepte = lade_kochbuch(datei)
+        self.assertTrue(rezepte["testshake"].portionen_geschaetzt is False)
+
 
 if __name__ == "__main__":
     unittest.main()

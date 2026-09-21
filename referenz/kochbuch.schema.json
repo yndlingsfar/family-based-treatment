@@ -13,6 +13,7 @@
     "allergene": "Liste von Texten, z. B. ['milch', 'nuesse', 'ei', 'gluten']",
     "quelle": "Text mit Seitenangabe, Pflicht",
     "pruefen": "optional true, wenn die Plausibilitaetspruefung angeschlagen hat",
-    "pruefnotiz": "optionaler Text mit dem Befund"
+    "pruefnotiz": "optionaler Text mit dem Befund",
+    "portionen_geschaetzt": "optional true, wenn die Portionszahl nicht im Kochbuch stand und geschaetzt wurde"
   }
 }

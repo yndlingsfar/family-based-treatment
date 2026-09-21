@@ -33,19 +33,23 @@ Lauf über alle 79 Rezepte, Skript aus dem Task-Brief:
 ```
 Rezepte gesamt:      79
 Strukturfehler:      0
-Plausibilitaetsnotiz:53
+Plausibilitaetsnotiz:54
 ```
+
+(Nach Fix-Runde 1, siehe unten; unmittelbar nach der ersten Übertragung waren
+es 53 Notizen und `kcal_pro_portion=134` bei risotto-alla-parmigiana statt
+`484` — die Notizzahl stieg durch die Korrektur dieses einen Rezepts um 1.)
 
 **Strukturfehler: 0** — Abnahmekriterium erfüllt.
 
-Alle 53 verbleibenden Plausibilitätsnotizen wurden einzeln angesehen. Für
-zwei war das Ergebnis eine **Korrektur der Übertragung** statt einer Notiz
-(die Zutaten-Summe über die Standardtabelle war präziser als eine vorher
-verwendete Dichte-Schätzung); für alle anderen wurde `"pruefen": true` mit
-einer `"pruefnotiz"` gesetzt, die die Abweichung erklärt. Keine Notiz blieb
-unkommentiert.
+Alle Plausibilitätsnotizen wurden einzeln angesehen. Für zwei
+(`falscher-joghurt` in der ersten Runde, `risotto-alla-parmigiana` in
+Fix-Runde 1) war das Ergebnis eine **Korrektur der Übertragung** statt einer
+Notiz bzw. eine Korrektur der zugrunde liegenden Kalorienzahl; für alle
+anderen wurde `"pruefen": true` mit einer `"pruefnotiz"` gesetzt, die die
+Abweichung erklärt. Keine Notiz blieb unkommentiert.
 
-## Rezepte mit `pruefen: true` (69 von 79)
+## Rezepte mit `pruefen: true` (70 von 79, nach Fix-Runde 1)
 
 Die hohe Zahl ist erwartbar: Das Kochbuch nennt Kalorien uneinheitlich (mal
 pro Portion, mal fürs ganze Rezept, mal als Bereich, mal gar nicht), und die
@@ -72,11 +76,14 @@ Die 69 Fälle gliedern sich in vier Gruppen:
    nudelsalat-alla-carlo-fortina, power-porridge-schnelle-variante,
    ramen-suppe, ruehrei, vollkornbroetchen-ueber-nacht.
 
-3. **Kochbuch nennt nur eine Dichte (kcal/100g) oder nur eine Portionenzahl,
-   nicht beides (9 Rezepte).** kcal_pro_portion wurde aus geschätztem
-   Gesamtgewicht abgeleitet: french-toast, kartoffel-gemuese-auflauf,
-   moehreneintopf, powermilch, risotto-alla-parmigiana,
-   suesskartoffel-karottensuppe, tomatenreis, tortellini-alla-panna,
+3. **Kochbuch nennt nur eine Dichte (kcal/100g), nur eine Portionenzahl oder
+   gar keine Portionenzahl (10 Rezepte).** kcal_pro_portion und/oder
+   Portionenzahl wurden aus Gesamtgewicht bzw. den in Fix-Runde 1
+   eingeführten Portionsgrößen-Bändern abgeleitet: french-toast,
+   kartoffel-gemuese-auflauf, moehreneintopf, powermilch,
+   risotto-alla-parmigiana (kcal-Wert in Fix-Runde 1 korrigiert, siehe
+   unten), suesskartoffel-karottensuppe, tomatenreis, tomatensuppe-mit-avocado
+   (Portionenzahl in Fix-Runde 1 korrigiert), tortellini-alla-panna,
    kastaniensuppe (5,5 auf 6 Portionen gerundet).
 
 4. **Plausibilitätsabweichung durch nicht zuordenbare Grundzutaten oder
@@ -108,9 +115,94 @@ Die 69 Fälle gliedern sich in vier Gruppen:
    dennoch unverändert übernommen, da keine sichere Korrektur ableitbar
    war.
 
-Die restlichen 10 Rezepte (79 − 69) haben keine Plausibilitätsnotiz und
-keine sonstige Unsicherheit — ihre Kochbuchangabe passt direkt oder über die
+Die restlichen 9 Rezepte (79 − 70) haben keine Plausibilitätsnotiz und keine
+sonstige Unsicherheit — ihre Kochbuchangabe passt direkt oder über die
 zugeordneten Zutaten innerhalb der 10-%-Toleranz.
+
+## Fix-Runde 1: Portionenzahl statt Default-1 aus der Zutatenmasse geschätzt
+
+**Befund (vom Koordinator gemeldet):** Die ursprüngliche Regel "steht nur
+eine Gesamtangabe ohne Portionen, `portionen: 1` setzen und die
+Gesamtangabe übernehmen" erzeugte 13 Rezepte, deren "eine Portion"
+tatsächlich ein ganzer Topf/eine ganze Auflaufform war (bis zu 7056 kcal für
+"1 Portion"). Für eine App, die diese Zahl als eine von sechs
+Tagesmahlzeiten einplant, ist das kein Etikettierungsdetail, sondern ein
+Fehler mit derselben Wirkung wie eine falsch benannte Bezugsgröße: die Zahl
+ist echt, die Einheit stimmt nicht.
+
+**Korrektur:**
+
+1. Neues Feld `"portionen_geschaetzt": true` auf jedem Rezept, dessen
+   Portionszahl nicht wörtlich als einzelne Zahl im Kochbuch stand
+   (Default ohne jede Angabe, Rundung einer Bruchportion wie "5,5
+   Portionen", Auswahl aus einer Spanne wie "3-4 Portionen" oder Ableitung
+   aus einer Kochbuch-Portionsgröße/-dichte). **54 von 79 Rezepten**
+   tragen dieses Flag.
+2. Für die 13 vom Koordinator genannten "Ein-Topf-als-eine-Portion"-Rezepte:
+   Portionenzahl aus der Zutaten-Gesamtmasse und Portionsgrößen-Bändern neu
+   geschätzt (Suppen/Eintöpfe 350–470g, Nudel-/Auflaufgerichte 350–450g,
+   Reis-/Risottogerichte ca. 350g, Shakes/Getränke 250–500ml), dann
+   `kcal_pro_portion` = dieselbe Gesamtkalorienzahl / neue Portionenzahl neu
+   geteilt — die Gesamtkalorienzahl selbst wurde nicht neu hergeleitet.
+3. `risotto-alla-parmigiana`: Portionenzahl (4) ist Kochbuch-Angabe ("als
+   Hauptspeise für 4 Personen") und blieb unverändert. Der kcal-Wert
+   (134 kcal/Portion) war aber nachweislich zu niedrig, weil der Reis
+   (400g, der größte Kalorienträger) nicht in der Anreicherungstabelle
+   steht und komplett fehlte — korrigiert auf 484 kcal/Portion durch eine
+   manuelle Reis-Schätzung (ca. 350 kcal/100g roher Reis, außerhalb der
+   Anreicherungstabelle).
+4. Code-Änderung: `portionen_geschaetzt: bool = False` im `Rezept`-Dataclass
+   (`fbt/kochbuch.py`), gelesen in `lade_kochbuch`, dokumentiert in
+   `referenz/kochbuch.schema.json`, mit zwei neuen Tests in
+   `tests/test_kochbuch.py` abgesichert. `pruefe_rezept` brauchte keine
+   Änderung (ignoriert unbekannte Schlüssel).
+
+**Ergebnis des Bandchecks** (100–1600 kcal/Portion, alle 79 Rezepte erneut
+geprüft, nicht nur die 13 genannten):
+
+```
+ausserhalb 100-1600 kcal/Portion: 2
+  ueberbackener-gemueseauflauf-mit-sojawuerfeln    1666 kcal x5
+  glueckskugeln                                 80 kcal x6
+```
+
+Beide verbleibenden Treffer sind einzeln erklärt, nicht korrigiert, weil
+ihre Portionenzahl **wörtlich im Kochbuch steht** (keine Schätzung, kein
+`portionen_geschaetzt`-Flag):
+
+- **ueberbackener-gemueseauflauf-mit-sojawuerfeln** (1666 kcal, 5
+  Portionen): Kochbuch nennt explizit "(5 Personen)". Der Wert liegt nur
+  66 kcal über der 1600er-Grenze; das Gericht ist mit 600g Gouda, 500g
+  Nudeln, 400ml Sahne und 280g Sojawürfeln ausgesprochen kalorienreich —
+  plausibel für eine sehr reichhaltige Familien-Auflaufform. Keine Änderung.
+- **glueckskugeln** (80 kcal, 6 Portionen): Kochbuch nennt explizit "6
+  kleine Bällchen". 80 kcal für eine kleine Praline aus Butter, Mandelmehl,
+  Puderzucker und Kakao ist plausibel. Keine Änderung.
+
+**Weitere Prüfung, ob die Zutatenmasse hinter Rezepten passt, die den
+kcal-Bandcheck bereits vorher bestanden:** Bei einigen Rezepten mit
+erfundener Portionenzahl war die resultierende Zutatenmasse pro "Portion"
+zwar größer als eine realistische Einzelportion (z. B.
+cremiges-parmesan-huehnchen mit 1734g für 1 Portion, kuerbis-feta-honig-auflauf
+mit 1867g, couscous-mit-gefluegel-und-tomatensalat mit 876g, ramen-suppe mit
+1168g), aber der resultierende kcal-Wert lag zufällig bereits innerhalb der
+100–1600-kcal-Bandgrenze — meist, weil auch die kcal-Angabe selbst schon zu
+niedrig war (nicht zuordenbare Grundzutaten, siehe oben). Diese Rezepte
+wurden **nicht** neu durchgerechnet (das hätte bei mindestens einem Fall,
+kaeseknoedel-spatzen, den kcal-Wert über die 1600er-Grenze getrieben, siehe
+unten), sondern erhielten nur das `portionen_geschaetzt`-Flag zur
+Transparenz. Eine Neuberechnung dieser Fälle wäre eine dritte Fix-Runde und
+ist hier bewusst nicht vorgenommen worden, um den Auftrag nicht über den
+gemeldeten Befund hinaus auszuweiten.
+
+**Grenzfall, der bei mechanischer Anwendung des Bandes eine neue
+Verletzung erzeugt hätte:** kaeseknoedel-spatzen (852g Gesamtmasse, 4
+erfundene Portionen, 872 kcal/Portion, innerhalb des Bandes). Eine
+Neuschätzung nach dem Auflauf-Band (350–450g) hätte 2 Portionen ergeben
+(426g/Portion, passt zur Masse), aber 1744 kcal/Portion (verletzt die
+1600er-Grenze) — die vorhandene Portionenzahl (4) wurde daher unverändert
+gelassen und nur geflaggt, statt sie durch eine Zahl zu ersetzen, die zwar
+zur Masse, aber nicht mehr zur kcal-Grenze passt.
 
 ## Schritt 5: Anreicherungstabelle gegen Produkte abgleichen
 
@@ -205,10 +297,12 @@ Zeitpunkt im Arbeitsverzeichnis des Repositories.
   dokumentiert.
 - **Fehlende Portionenzahl bei großen Mengen ohne Personenangabe** (z. B.
   Süßkartoffel-Karottensuppe mit 1,5 kg Karotten, Kartoffel-Lauchsuppe mit
-  2 kg Kartoffeln). Regel strikt angewendet: `portionen: 1`, gesamte Menge
-  als `kcal_pro_portion`. Das ergibt bei diesen Rezepten unrealistisch hohe
-  Werte für "eine Portion" — sie sind erkennbar Vorrats-/Chargenrezepte für
-  mehrere Mahlzeiten, aber das Kochbuch selbst nennt keine Aufteilung.
+  2 kg Kartoffeln). **Korrigiert in Fix-Runde 1** (siehe eigener Abschnitt
+  oben): Die ursprüngliche Regel (`portionen: 1`, gesamte Menge als
+  `kcal_pro_portion`) erzeugte unrealistische "Ein-Topf-als-eine-Portion"-
+  Werte bis zu 7056 kcal. Portionenzahl wird jetzt aus der Zutatenmasse und
+  einer Portionsgrößen-Spanne je Gerichttyp geschätzt und als
+  `portionen_geschaetzt: true` gekennzeichnet.
 - **Generische "Sahne" ohne %-Angabe** wurde durchgängig als `sahne-30`
   zugeordnet (Standard-Schlagsahne), auch wenn das Kochbuch selbst an
   einzelnen Stellen 33 % oder unbenannte Fettstufen nennt — es gibt in der
