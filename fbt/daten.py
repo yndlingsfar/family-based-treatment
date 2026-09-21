@@ -99,6 +99,13 @@ def _optional_int(abschnitt: dict, schluessel: str, datei: Path) -> int | None:
     return _pflicht(abschnitt, schluessel, int, datei)
 
 
+def _optional_str(abschnitt: dict, schluessel: str, datei: Path) -> str | None:
+    """Wie _pflicht, aber fehlend ist erlaubt und ergibt None."""
+    if schluessel not in abschnitt:
+        return None
+    return _pflicht(abschnitt, schluessel, str, datei)
+
+
 def _texte(abschnitt: dict, schluessel: str, datei: Path) -> tuple[str, ...]:
     werte = abschnitt.get(schluessel, [])
     if not isinstance(werte, list) or not all(isinstance(w, str) for w in werte):
@@ -124,8 +131,8 @@ def _profil_aus_toml(roh: dict, datei: Path) -> Profil:
         zunahme_g_pro_woche=_pflicht(ziele, "zunahme_g_pro_woche", int, datei),
         mahlzeiten=geplant,
         kcal_taeglich=_optional_int(ziele, "kcal_taeglich", datei),
-        kcal_quelle=ziele.get("kcal_quelle"),
-        wiegen=behandlung.get("wiegen"),
+        kcal_quelle=_optional_str(ziele, "kcal_quelle", datei),
+        wiegen=_optional_str(behandlung, "wiegen", datei),
         unvertraeglichkeiten=_texte(praeferenzen, "unvertraeglichkeiten", datei),
         fearfoods=_texte(praeferenzen, "fearfoods", datei),
     )

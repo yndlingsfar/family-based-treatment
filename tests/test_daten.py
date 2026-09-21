@@ -123,6 +123,39 @@ class ProfilTest(unittest.TestCase):
             lade_profil(basis)
         self.assertIn("profil.toml", str(fall.exception))
 
+    def test_lehnt_wahrheitswert_als_wiegen_ab(self):
+        with self.assertRaises(DatenFehler) as fall:
+            lade_profil(
+                schreibe(
+                    '[kind]\nrufname = "T"\ngeburtsdatum = 2010-01-15\n'
+                    'groesse_cm = 150\n\n[ziele]\nzunahme_g_pro_woche = 500\n'
+                    '[behandlung]\nwiegen = true\n\n[mahlzeiten]\nplan = ["fruehstueck"]\n'
+                )
+            )
+        self.assertIn("wiegen", str(fall.exception))
+
+    def test_lehnt_zahl_als_kcal_quelle_ab(self):
+        with self.assertRaises(DatenFehler) as fall:
+            lade_profil(
+                schreibe(
+                    '[kind]\nrufname = "T"\ngeburtsdatum = 2010-01-15\n'
+                    'groesse_cm = 150\n\n[ziele]\nzunahme_g_pro_woche = 500\n'
+                    'kcal_quelle = 2026\n\n[mahlzeiten]\nplan = ["fruehstueck"]\n'
+                )
+            )
+        self.assertIn("kcal_quelle", str(fall.exception))
+
+    def test_liest_profil_ohne_optionale_strings(self):
+        profil = lade_profil(
+            schreibe(
+                '[kind]\nrufname = "T"\ngeburtsdatum = 2010-01-15\n'
+                'groesse_cm = 150\n\n[ziele]\nzunahme_g_pro_woche = 500\n'
+                '[mahlzeiten]\nplan = ["fruehstueck"]\n'
+            )
+        )
+        self.assertIsNone(profil.kcal_quelle)
+        self.assertIsNone(profil.wiegen)
+
 
 if __name__ == "__main__":
     unittest.main()
