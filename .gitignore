@@ -1,0 +1,9 @@
+# Die Netzwerk-Dokumente (Kochbuch, Arztbrief, Sicherheits-Checkliste) dürfen
+# laut Kochbuch-Vorwort nicht weitergegeben werden. Sie gehören in den
+# Datenordner ($FBT_DATEN), nicht ins Repo.
+*.pdf
+
+# Personenbezogene Daten liegen grundsätzlich außerhalb dieses Repos.
+# Diese Regel ist eine zweite Absicherung, nicht der eigentliche Schutz.
+daten/
+*.csv

@@ -190,7 +190,7 @@ family-based-treatment/
 │   ├─ wochenbericht.md          /wochenbericht
 │   └─ spickzettel.md            /spickzettel
 ├─ referenz/
-│   ├─ kochbuch.json             ~80 Rezepte des Netzwerk-Kochbuchs
+│   ├─ kochbuch.schema.json      Schema + Importer, NICHT die Rezepte selbst
 │   ├─ anreicherung.json         ~30 Anreicherungsmittel, kcal/100 g
 │   ├─ formulierungen.md         Connect-before-Direct, Sätze für den Tisch
 │   ├─ eskalation.md             harte Kriterien
@@ -299,7 +299,24 @@ Freitext: Stimmung, was half, was eskalierte, Auffälligkeiten.
 Geplant und Tatsächlich **getrennt** aus und macht die Unsicherheit sichtbar,
 statt eine Scheingenauigkeit zu erzeugen.
 
-### 6.4 `referenz/kochbuch.json`
+### 6.4 `kochbuch.json` — liegt bei den Daten, nicht im Plugin
+
+Das Vorwort des Netzwerk-Kochbuchs lautet: *„Es ist nur für den privaten Zweck
+des ‚Refeedings' zu nutzen und darf nicht veröffentlicht oder an Dritte
+weitergegeben werden."*
+
+Die Rezeptdaten dürfen deshalb **nicht Teil des Plugins** sein — das wäre die
+untersagte Weitergabe, sobald das Plugin geteilt wird. Aufteilung:
+
+- **Im Plugin:** `kochbuch.schema.json` (Struktur) und ein Importer, der ein
+  Kochbuch-PDF in diese Struktur überführt.
+- **Bei den Daten** (`$FBT_DATEN/kochbuch.json`): die Rezepte selbst. Jede
+  Familie importiert ihr eigenes Exemplar.
+
+Der Importer bleibt bewusst allgemein genug, dass auch ein anderes Kochbuch
+oder eine spätere Fassung eingelesen werden kann.
+
+Struktur:
 
 Je Rezept: `id`, `titel`, `kategorie`, `kcal_gesamt`, `portionen`,
 `kcal_pro_portion`, `zutaten[]`, `zubereitung`, `zeit_min`, `geraete[]`,
@@ -391,7 +408,8 @@ Auffälligkeiten, offene Fragen. Enthält nie Interpretationen, die einer
 ## 9. Ausbaustufen
 
 **Stufe 1 — Kalorientracking und Mahlzeitenplanung** (Priorität der Familie)
-MCP-Erweiterung · `kochbuch.json` · `anreicherung.json` · `anreichern.py` ·
+MCP-Erweiterung · Kochbuch-Importer + `kochbuch.json` in den Daten ·
+`anreicherung.json` · `anreichern.py` ·
 `bilanz.py` · Skills `mahlzeit-planen` und `rezept-anreichern` ·
 `/tagesplan` · `/tagesabschluss` · Cookidoo-Einkaufsliste
 
