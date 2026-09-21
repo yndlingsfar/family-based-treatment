@@ -80,7 +80,7 @@ unvollständige Prüfung darf nicht wie eine vollständige aussehen.
 
 ### 3.3 Sprache
 
-- Externalisierung durchgängig: „die Krankheit will das", nicht „Leni will das".
+- Externalisierung durchgängig: „die Krankheit will das", nicht „<Name> will das".
 - „Verantwortung übernehmen" / „einspringen", nicht „Kontrolle übernehmen"
   (Le Grange vermeidet Letzteres bewusst).
 - „Sobald–dann", nicht „wenn–dann".
@@ -243,8 +243,15 @@ family-based-treatment/
 
 ### 5.1 Trennung Plugin / Daten
 
-Das Repo enthält **keinen einzigen personenbezogenen Datenpunkt**. Die Daten
-liegen unter:
+Das Repo enthält **keinen einzigen personenbezogenen Datenpunkt** — auch nicht
+in Beispielen, Vorlagen oder Tests. Testdaten tragen erfundene Namen und Werte.
+
+*Nachtrag vom 21.09.2026:* In den ersten Fassungen dieser Spec stand der Rufname
+des Kindes in einem Beispielblock. Er ist jetzt ersetzt, steht aber weiterhin in
+der Git-Historie der Commits f4a4e1d/536f30e. Ein vollständiges Entfernen
+erforderte ein Umschreiben der Historie — eine Entscheidung, die Daniel trifft.
+
+Die Daten liegen unter:
 
 ```
 ~/Library/Mobile Documents/com~apple~CloudDocs/FBT-Daten/
@@ -264,11 +271,15 @@ Cloud-Anbieter.
 
 ## 6. Datenmodell
 
-### 6.1 `profil.yaml`
+### 6.1 `profil.toml`
+
+*Korrektur vom 21.09.2026:* ursprünglich als YAML geplant. TOML, weil `tomllib`
+Standardbibliothek ist. Das folgende Beispiel bleibt in YAML-Notation stehen,
+weil es nur die Felder zeigt; verbindlich ist `referenz/profil.vorlage.toml`.
 
 ```yaml
 kind:
-  rufname: Leni
+  rufname: Vorname
   geburtsdatum: null        # für BMI-Perzentil (KiGGS) nötig
   groesse_cm: null
 ziele:
@@ -305,7 +316,7 @@ datum,gewicht_kg,uhrzeit,bedingungen,gewogen_von,blind
 `bedingungen` als Freitext (Kleidung, Waage), weil der Arztbrief ausdrücklich
 gleichbleibende Bedingungen verlangt und Abweichungen die Kurve erklären.
 
-### 6.3 `tage/JJJJ-MM-TT.md`
+### 6.3 `tage/JJJJ-MM-TT.toml`
 
 Maschinenlesbarer Kopf, menschenlesbarer Rumpf:
 
@@ -465,7 +476,7 @@ Jede Stufe ist für sich nutzbar. Stufe 1 muss ohne Stufe 2 und 3 funktionieren.
 
 ## 10. Offene Punkte
 
-- **`profil.yaml` ausfüllen.** Geburtsdatum, Größe, ärztlich vorgegebene
+- **`profil.toml` ausfüllen.** Geburtsdatum, Größe, ärztlich vorgegebene
   Tages-kcal, Wiegemodus. Ohne diese Angaben kann Stufe 1 planen, aber keine
   Zielerreichung beurteilen.
 - **am-esstis.ch.** Der Bereich hinter dem Login (Dokumente, Kochbuch, Forum)
