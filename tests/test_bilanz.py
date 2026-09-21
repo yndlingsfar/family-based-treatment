@@ -112,6 +112,7 @@ name = "Fruehstueck"
   titel = "Shake"
   quelle = "kochbuch:shake"
   kcal_geplant = 500
+  anteil_gegessen = 1.0
 """
 
 BEIDE_UNBEKANNT = """
@@ -125,6 +126,42 @@ name = "Mittag"
   [[mahlzeit.gericht]]
   titel = "Gekochtes"
   quelle = "frei"
+
+  [[mahlzeit.gericht]]
+  titel = "Shake"
+  quelle = "kochbuch:shake"
+  kcal_geplant = 500
+"""
+
+ZWEI_UNBEKANNTE = """
+datum = 2026-02-03
+ziel_kcal = 3000
+
+[[mahlzeit]]
+zeit = "12:00"
+name = "Mittag"
+
+  [[mahlzeit.gericht]]
+  titel = "Gekochtes"
+  quelle = "frei"
+
+  [[mahlzeit.gericht]]
+  titel = "Eintopf"
+  quelle = "frei"
+"""
+
+ZWEI_ANGENOMMEN = """
+datum = 2026-02-03
+ziel_kcal = 3000
+
+[[mahlzeit]]
+zeit = "07:30"
+name = "Fruehstueck"
+
+  [[mahlzeit.gericht]]
+  titel = "Porridge"
+  quelle = "kochbuch:porridge"
+  kcal_geplant = 800
 
   [[mahlzeit.gericht]]
   titel = "Shake"
@@ -255,6 +292,49 @@ class AnsichtTest(unittest.TestCase):
         self.assertEqual(len(b.angenommen), 0)
         text = elternansicht(b)
         self.assertNotIn("Ohne Angabe, als vollstaendig gerechnet", text)
+
+    def test_singular_plural_unbekannte_eins(self):
+        """Genau 1 unbekannte → 'Gericht' (singular)."""
+        b = lade_tag(date(2026, 2, 3), schreibe(NUR_UNBEKANNTE))
+        text = elternansicht(b)
+        self.assertIn("1 Gericht ohne Kalorienangabe", text)
+        self.assertNotIn("1 Gerichte", text)
+
+    def test_singular_plural_unbekannte_zwei(self):
+        """Genau 2 unbekannte → 'Gerichte' (plural)."""
+        b = lade_tag(date(2026, 2, 3), schreibe(ZWEI_UNBEKANNTE))
+        text = elternansicht(b)
+        self.assertIn("2 Gerichte ohne Kalorienangabe", text)
+
+    def test_singular_plural_angenommen_eins(self):
+        """Genau 1 angenommen → 'Gericht' (singular)."""
+        b = lade_tag(date(2026, 2, 3), schreibe(NUR_ANGENOMMEN))
+        text = elternansicht(b)
+        self.assertIn("1 Gericht ohne Anteil", text)
+        self.assertNotIn("1 Gerichte", text)
+
+    def test_singular_plural_angenommen_zwei(self):
+        """Genau 2 angenommen → 'Gerichte' (plural)."""
+        b = lade_tag(date(2026, 2, 3), schreibe(ZWEI_ANGENOMMEN))
+        text = elternansicht(b)
+        self.assertIn("2 Gerichte ohne Anteil", text)
+
+    def test_marker_auf_beiden_total_zeilen(self):
+        """Marker muss auf BEIDEN Zeilen erscheinen (geplant und tatsaechlich)."""
+        b = lade_tag(date(2026, 2, 3), schreibe(NUR_UNBEKANNTE))
+        text = elternansicht(b)
+        lines = text.split("\n")
+        geplant_line = [l for l in lines if l.startswith("geplant:")][0]
+        tatsaechlich_line = [l for l in lines if l.startswith("tatsaechlich:")][0]
+        self.assertIn("unvollstaendig", geplant_line, "Marker fehlt auf geplant-Zeile")
+        self.assertIn("unvollstaendig", tatsaechlich_line, "Marker fehlt auf tatsaechlich-Zeile")
+
+    def test_ohne_angabe_sektion_rendern(self):
+        """'Ohne Angabe, als vollstaendig gerechnet:' Sektion mit Gerichten rendern."""
+        b = lade_tag(date(2026, 2, 3), schreibe(NUR_ANGENOMMEN))
+        text = elternansicht(b)
+        self.assertIn("Ohne Angabe, als vollstaendig gerechnet:", text)
+        self.assertIn("Fruehstueck: Porridge", text)
 
 
 if __name__ == "__main__":
