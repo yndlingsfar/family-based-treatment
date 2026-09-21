@@ -1,0 +1,21 @@
+# Vorlage fuer $FBT_DATEN/tage/JJJJ-MM-TT.toml
+#
+# ACHTUNG TOML: Alle Schluessel auf oberster Ebene muessen VOR der ersten
+# [[mahlzeit]]-Tabelle stehen. Steht beobachtungen weiter unten, gehoert es
+# plotzlich zur letzten Mahlzeit.
+
+datum = 2026-01-01
+ziel_kcal = 3000
+beobachtungen = """
+Freitext: Stimmung, was geholfen hat, was eskaliert ist, Auffaelligkeiten.
+"""
+
+[[mahlzeit]]
+zeit = "07:30"
+name = "Fruehstueck"
+
+  [[mahlzeit.gericht]]
+  titel = "Power-Porridge"
+  quelle = "kochbuch:power-porridge"   # oder "cookidoo:r16687" oder "frei"
+  kcal_geplant = 800
+  anteil_gegessen = 1.0                # 0.0 bis 1.0, Schaetzung der Eltern
