@@ -8,7 +8,7 @@ Pruefung.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from fbt.daten import DatenFehler, daten_pfad
@@ -42,11 +42,19 @@ class Rezept:
         return self.kcal_pro_portion * self.portionen
 
 
-def _zahl(wert, name: str, fehler: list[str], *, ganz: bool = False) -> None:
+def _zahl(wert, name: str, fehler: list[str], *, ganz: bool = False,
+          null_erlaubt: bool = False) -> None:
     if isinstance(wert, bool) or not isinstance(wert, int if ganz else (int, float)):
         fehler.append(f"'{name}' muss eine Zahl sein, ist {type(wert).__name__}.")
-    elif wert <= 0:
+    elif null_erlaubt and wert < 0:
+        fehler.append(f"'{name}' darf nicht negativ sein, ist {wert}.")
+    elif not null_erlaubt and wert <= 0:
         fehler.append(f"'{name}' muss groesser als 0 sein, ist {wert}.")
+
+
+def _text(wert, name: str, fehler: list[str]) -> None:
+    if not isinstance(wert, str) or not wert.strip():
+        fehler.append(f"'{name}' muss ein nicht-leerer Text sein.")
 
 
 def pruefe_rezept(roh: dict) -> list[str]:
@@ -66,6 +74,9 @@ def pruefe_rezept(roh: dict) -> list[str]:
         )
     _zahl(roh["portionen"], "portionen", fehler, ganz=True)
     _zahl(roh["kcal_pro_portion"], "kcal_pro_portion", fehler)
+    _zahl(roh["zeit_min"], "zeit_min", fehler, ganz=True, null_erlaubt=True)
+    for name in ("titel", "zubereitung", "quelle"):
+        _text(roh[name], name, fehler)
 
     if not isinstance(roh["zutaten"], list) or not roh["zutaten"]:
         fehler.append("'zutaten' muss eine nicht-leere Liste sein.")

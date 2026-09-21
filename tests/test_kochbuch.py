@@ -45,6 +45,31 @@ class SchemaTest(unittest.TestCase):
     def test_meldet_unbekannte_kategorie(self):
         self.assertTrue(pruefe_rezept({**GUELTIG, "kategorie": "quatsch"}))
 
+    def test_meldet_bool_fuer_portionen(self):
+        self.assertIn("portionen", " ".join(pruefe_rezept({**GUELTIG, "portionen": True})))
+
+    def test_meldet_bool_fuer_kcal_pro_portion(self):
+        self.assertIn("kcal_pro_portion", " ".join(pruefe_rezept({**GUELTIG, "kcal_pro_portion": True})))
+
+    def test_meldet_bool_fuer_zutat_menge(self):
+        kaputt = {**GUELTIG, "zutaten": [{"menge": True, "einheit": "g", "was": "Test"}]}
+        self.assertIn("menge", " ".join(pruefe_rezept(kaputt)))
+
+    def test_meldet_string_fuer_zeit_min(self):
+        self.assertIn("zeit_min", " ".join(pruefe_rezept({**GUELTIG, "zeit_min": "5 Min"})))
+
+    def test_meldet_negative_zeit_min(self):
+        self.assertIn("zeit_min", " ".join(pruefe_rezept({**GUELTIG, "zeit_min": -1})))
+
+    def test_akzeptiert_zeit_min_null(self):
+        self.assertEqual(pruefe_rezept({**GUELTIG, "zeit_min": 0}), [])
+
+    def test_meldet_zahl_fuer_titel(self):
+        self.assertIn("titel", " ".join(pruefe_rezept({**GUELTIG, "titel": 123})))
+
+    def test_meldet_leerer_quelle(self):
+        self.assertIn("quelle", " ".join(pruefe_rezept({**GUELTIG, "quelle": ""})))
+
 
 class PlausibilitaetTest(unittest.TestCase):
     def setUp(self):
