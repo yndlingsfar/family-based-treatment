@@ -1,0 +1,2 @@
+# Optional: Gewichtsdiagramm im Wochenbericht. Rechnen und Text bleiben abhaengigkeitsfrei.
+matplotlib>=3.6,<4

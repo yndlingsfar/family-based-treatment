@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import tomllib
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 STANDARD_DATEN = (
@@ -46,6 +46,9 @@ class Profil:
     wiegen: str | None = None
     unvertraeglichkeiten: tuple[str, ...] = ()
     fearfoods: tuple[str, ...] = ()
+    bmi_referenz: str | None = None
+    groesse_gemessen_am: date | None = None
+    zunahme_quelle: str | None = None
 
     @property
     def kcal_bekannt(self) -> bool:
@@ -120,19 +123,43 @@ def _profil_aus_toml(roh: dict, datei: Path) -> Profil:
     mahlzeiten = roh.get("mahlzeiten", {})
     praeferenzen = roh.get("praeferenzen", {})
 
+    for name, abschnitt in (("kind", kind), ("ziele", ziele),
+                            ("behandlung", behandlung), ("mahlzeiten", mahlzeiten),
+                            ("praeferenzen", praeferenzen)):
+        if not isinstance(abschnitt, dict):
+            raise DatenFehler(f"{datei}: [{name}] muss eine Tabelle sein.")
+    referenz = _optional_str(kind, "bmi_referenz", datei)
+    if referenz is not None and referenz not in ("maedchen", "jungen"):
+        raise DatenFehler(f"{datei}: bmi_referenz muss 'maedchen' oder 'jungen' sein.")
+    gemessen = kind.get("groesse_gemessen_am")
+    if gemessen is not None and type(gemessen) is not date:
+        raise DatenFehler(f"{datei}: groesse_gemessen_am muss ein Datum sein.")
+    geburt = _pflicht(kind, "geburtsdatum", date, datei)
+    if isinstance(geburt, datetime) or geburt > date.today():
+        raise DatenFehler(f"{datei}: geburtsdatum muss ein vergangenes Datum ohne Uhrzeit sein.")
+    if gemessen is not None and not geburt <= gemessen <= date.today():
+        raise DatenFehler(f"{datei}: groesse_gemessen_am liegt vor Geburt oder in der Zukunft.")
+    groesse = _pflicht(kind, "groesse_cm", int, datei)
+    zunahme = _pflicht(ziele, "zunahme_g_pro_woche", int, datei)
+    if groesse <= 0 or zunahme <= 0:
+        raise DatenFehler(f"{datei}: groesse_cm und zunahme_g_pro_woche muessen positiv sein.")
+
     geplant = _texte(mahlzeiten, "plan", datei)
     if not geplant:
         raise DatenFehler(f"{datei}: '[mahlzeiten] plan' darf nicht leer sein.")
 
     return Profil(
         rufname=_pflicht(kind, "rufname", str, datei),
-        geburtsdatum=_pflicht(kind, "geburtsdatum", date, datei),
-        groesse_cm=_pflicht(kind, "groesse_cm", int, datei),
-        zunahme_g_pro_woche=_pflicht(ziele, "zunahme_g_pro_woche", int, datei),
+        geburtsdatum=geburt,
+        groesse_cm=groesse,
+        zunahme_g_pro_woche=zunahme,
         mahlzeiten=geplant,
         kcal_taeglich=_optional_int(ziele, "kcal_taeglich", datei),
         kcal_quelle=_optional_str(ziele, "kcal_quelle", datei),
         wiegen=_optional_str(behandlung, "wiegen", datei),
         unvertraeglichkeiten=_texte(praeferenzen, "unvertraeglichkeiten", datei),
         fearfoods=_texte(praeferenzen, "fearfoods", datei),
+        bmi_referenz=referenz,
+        groesse_gemessen_am=gemessen,
+        zunahme_quelle=_optional_str(ziele, "zunahme_quelle", datei),
     )

@@ -13,6 +13,9 @@
 rufname = "Vorname"
 geburtsdatum = 2012-01-01   # fuer das BMI-Altersperzentil
 groesse_cm = 150
+# Optional fuer BMI und KiGGS; ohne diese Angaben bleibt der Bericht nutzbar:
+# groesse_gemessen_am = 2026-01-01
+# bmi_referenz = "maedchen"  # oder "jungen"; ausdruecklich festlegen
 
 [ziele]
 # kcal_taeglich gibt die Aerztin vor. Solange die Zeile fehlt oder
@@ -20,6 +23,7 @@ groesse_cm = 150
 # kcal_taeglich = 2800
 # kcal_quelle = "wer, wann"
 zunahme_g_pro_woche = 500
+# zunahme_quelle = "aerztliche Vorgabe: wer, wann"
 
 [behandlung]
 phase = 1

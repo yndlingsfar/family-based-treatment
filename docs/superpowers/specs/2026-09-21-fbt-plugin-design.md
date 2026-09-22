@@ -2,6 +2,17 @@
 
 Stand: 2026-09-21
 
+**Umsetzungsstand 22.09.2026:** Stufe 1 ist gemergt, einschliesslich der
+Digitalisierung von 79 Kochbuchrezepten (siehe `docs/kochbuch-import.md`).
+Stufe 2 ist implementiert: Gewichtsverlauf, BMI/KiGGS-Naeherung und
+Wochenbericht. Verbindliche Rechenregeln, Datenformat, technische Grenzen
+und Bedienung stehen in [`docs/stufe-2.md`](../../stufe-2.md).
+Insbesondere ist die Vergleichslinie konfigurierbar statt fest 500 g/Woche;
+BMI braucht eine datierte Groesse und eine explizite Referenzkurve.
+Die folgenden Abschnitte dokumentieren den urspruenglichen Entwurf;
+Hinweise wie „kommt mit Stufe 2“ und die offene Kochbuch-Digitalisierung
+sind damit ueberholt. Stufe 3 bleibt offen.
+
 ## 1. Kontext und Ziel
 
 Eine Familie führt das Family-Based Treatment (FBT) für ihre 12-jährige Tochter

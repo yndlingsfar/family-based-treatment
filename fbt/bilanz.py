@@ -12,6 +12,7 @@ kann.
 from __future__ import annotations
 
 import re
+import math
 import tomllib
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -134,6 +135,8 @@ def _zahl(abschnitt: dict, schluessel: str, wo: str, datei: Path, *,
             f"{type(wert).__name__} ({wert!r}). Zahlen gehoeren ohne "
             f"Anfuehrungszeichen und ohne Zusaetze wie 'ca.' in die Datei."
         )
+    if not math.isfinite(wert):
+        raise DatenFehler(f"{datei}: '{schluessel}' {wo} muss endlich sein.")
     if min_wert is not None and wert < min_wert:
         raise DatenFehler(
             f"{datei}: '{schluessel}' {wo} ist {wert}, erlaubt ist "
@@ -169,6 +172,8 @@ def _datum(roh: dict, ersatz: date, datei: Path) -> date:
             f"{datei}: 'datum' muss ein Datum ohne Uhrzeit sein (JJJJ-MM-TT, "
             f"ohne Anfuehrungszeichen), ist {type(wert).__name__} ({wert!r})."
         )
+    if wert != ersatz:
+        raise DatenFehler(f"{datei}: datum {wert} passt nicht zum Dateinamen {ersatz}.")
     return wert
 
 
@@ -195,10 +200,16 @@ def lade_tag(datum: date, basis: Path | None = None) -> Tagesbilanz:
             f"referenz/tag.vorlage.toml nach."
         )
 
+    if not isinstance(roh_mahlzeiten, list) or not all(isinstance(m, dict) for m in roh_mahlzeiten):
+        raise DatenFehler(f"{datei}: Mahlzeiten muessen [[mahlzeit]]-Tabellen sein.")
+
     unbekannte: list[str] = []
     angenommen: list[str] = []
     mahlzeiten: list[Mahlzeit] = []
     for m in roh_mahlzeiten:
+        roh_gerichte = m.get("gericht", [])
+        if not isinstance(roh_gerichte, list) or not all(isinstance(g, dict) for g in roh_gerichte):
+            raise DatenFehler(f"{datei}: Gerichte muessen [[mahlzeit.gericht]]-Tabellen sein.")
         # Pruefen ob oberste-Ebene-Schluessel verirrt sind
         verirrt = [s for s in ("beobachtungen", "ziel_kcal", "datum") if s in m]
         for gr in m.get("gericht", []):

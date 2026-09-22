@@ -1,5 +1,5 @@
 {
   "name": "family-based-treatment",
-  "description": "Unterstützt Eltern beim Family-Based Treatment: Mahlzeitenplanung, Kalorienbilanz und Rezeptanreicherung für das Refeeding zu Hause.",
-  "version": "0.1.0"
+  "description": "Unterstützt Eltern beim Family-Based Treatment: Mahlzeitenplanung, Kalorienbilanz, Rezeptanreicherung, Gewichtsverlauf und Wochenbericht für Arzttermine.",
+  "version": "0.2.0"
 }

@@ -46,14 +46,19 @@ Ablauf:
    Kalorienzahlen — wer gerade an die Klinik verwiesen wird, braucht keinen
    Nebensatz über den Stand des Werkzeugs.
 
-   **Trifft keines zu**, sag trotzdem ausdrücklich dazu: das war nur die
-   symptombasierte Prüfung. Die gewichtsbasierten Kriterien (keine Zunahme
-   über zwei Wochen, Gewichtsabnahme) werden noch nicht automatisch
-   geprüft — das kommt erst mit Stufe 2. Diese Prüfung deckt nur einen Teil
-   der Eskalationskriterien aus dem Arztbrief ab, und das sagst du an jedem
-   Abschluss, nicht nur im Ausnahmefall — sonst sieht ein unauffälliger Tag
-   wie eine vollständige Prüfung aus, obwohl er es nicht ist. Erst danach
-   weiter mit den nächsten Schritten.
+   **Trifft keines zu**, folgt jetzt die Gewichtspruefung:
+   `PYTHONPATH="${CLAUDE_PLUGIN_ROOT:-.}" python3 -m fbt.verlauf --datum JJJJ-MM-TT`
+   (Datum des Abschlusses einsetzen.) Sie prueft alle Messungen bis zu diesem
+   Datum auf Abnahme und fehlende Netto-Zunahme ueber mindestens zwei Wochen.
+   Warnungen und Datenluecken woertlich ausgeben. Aktuelle oder bislang
+   ungeklaerte Warnungen zuerst aerztlich besprechen; bis dahin keine
+   Optimierung zu Hause. Historische Hinweise anhand ihrer Daten einordnen
+   und eine bereits erfolgte Abklaerung als Elternangabe dokumentieren.
+   Fehlt `gewicht.csv` oder ist sie fehlerhaft, ist der Verlauf **nicht
+   pruefbar**, nicht unauffaellig. Die fehlenden Daten mit den Eltern klaeren;
+   die Tagesdokumentation kann dennoch fortgesetzt werden. Auch bei
+   vorhandenen Daten ersetzt die Gewichtspruefung keine aerztliche
+   Untersuchung von Puls, Blutdruck und Labor.
 
 2. Tagesdatei laden (`fbt.bilanz.lade_tag`). Fehlt sie, frage, was es gab, und
    lege sie nach `referenz/tag.vorlage.toml` an, statt den Tag unbeurteilt zu
